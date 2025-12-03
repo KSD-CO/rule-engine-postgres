@@ -205,6 +205,7 @@ fn engine_value_to_json(value: &Value) -> serde_json::Value {
         Value::Array(arr) => {
             serde_json::Value::Array(arr.iter().map(engine_value_to_json).collect())
         }
+        Value::Expression(s) => serde_json::Value::String(s.clone()),
     }
 }
 

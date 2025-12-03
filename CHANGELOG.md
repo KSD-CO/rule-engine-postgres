@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Changed
-- Updated rust-rule-engine dependency from 0.10 to 0.14.1
+- Updated rust-rule-engine dependency from 0.14.1 to 1.6.0
+- Updated serde to 1.0.228
+- Updated chrono to 0.4.42
+
+### Fixed
+- Added support for `Value::Expression` variant in rust-rule-engine 1.6.0
 
 ## [1.0.0] - 2025-01-18
 
