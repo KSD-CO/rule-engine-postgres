@@ -43,7 +43,7 @@ Section: database
 Priority: optional
 Architecture: ${ARCH}
 Depends: postgresql-16
-Maintainer: Your Name <your.email@example.com>
+Maintainer: Ton That Vu <ttvuhm@gmail.com>
 Description: PostgreSQL extension for rule engine with GRL syntax
  Production-ready PostgreSQL extension for running business rules.
 Homepage: https://github.com/KSD-CO/rule-engine-postgres
