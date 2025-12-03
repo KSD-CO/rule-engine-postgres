@@ -1,0 +1,45 @@
+{
+   "name": "rule_engine_postgre_extensions",
+   "abstract": "Production-ready PostgreSQL extension for running Rust rule engine with GRL syntax",
+   "version": "1.0.0",
+   "maintainer": "Your Name <your.email@example.com>",
+   "license": "mit",
+   "provides": {
+      "rule_engine_postgre_extensions": {
+         "abstract": "Execute business rules using GRL syntax in PostgreSQL",
+         "file": "src/lib.rs",
+         "docfile": "README.md",
+         "version": "1.0.0"
+      }
+   },
+   "prereqs": {
+      "runtime": {
+         "requires": {
+            "PostgreSQL": "13.0.0"
+         }
+      }
+   },
+   "resources": {
+      "homepage": "https://github.com/KSD-CO/rule-engine-postgres",
+      "bugtracker": {
+         "web": "https://github.com/KSD-CO/rule-engine-postgres/issues"
+      },
+      "repository": {
+         "url": "git://github.com/KSD-CO/rule-engine-postgres.git",
+         "web": "https://github.com/KSD-CO/rule-engine-postgres",
+         "type": "git"
+      }
+   },
+   "generated_by": "Your Name",
+   "meta-spec": {
+      "version": "1.0.0",
+      "url": "https://pgxn.org/spec/"
+   },
+   "tags": [
+      "rule engine",
+      "business rules",
+      "grl",
+      "rust",
+      "decision engine"
+   ]
+}

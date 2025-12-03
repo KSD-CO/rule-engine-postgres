@@ -1,0 +1,25 @@
+Source: postgresql-16-rule-engine
+Section: database
+Priority: optional
+Maintainer: Your Name <your.email@example.com>
+Build-Depends: debhelper (>= 11),
+               postgresql-server-dev-16,
+               cargo,
+               rustc (>= 1.75)
+Standards-Version: 4.5.0
+Homepage: https://github.com/yourusername/rule-engine-postgre-extensions
+
+Package: postgresql-16-rule-engine
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, postgresql-16
+Description: PostgreSQL extension for rule engine with GRL syntax
+ Production-ready PostgreSQL extension written in Rust that brings
+ rule engine capabilities directly into your database. Execute complex
+ business logic using the Grule Rule Language (GRL) syntax.
+ .
+ Features:
+  - High performance compiled Rust code
+  - JSON/JSONB support
+  - Health checks and monitoring
+  - Error codes for debugging
+  - Docker support

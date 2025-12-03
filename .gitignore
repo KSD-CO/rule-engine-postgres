@@ -1,0 +1,39 @@
+# Rust
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo
+# Note: Cargo.lock should be committed for binary/library crates
+# Uncommenting for production reproducibility
+# Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# pgx
+.pgx/
+
+# Build artifacts
+*.so
+*.dylib
+*.dll
+
+# PostgreSQL extension build
+*.bc
+*.o
+
+# Test databases
+.pgrx/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
