@@ -1,0 +1,20 @@
+rule "VolumeDiscount" salience 10 {
+    when
+        Order.items >= 10
+    then
+        Order.discount = 0.15;
+}
+
+rule "LoyaltyBonus" salience 20 {
+    when
+        Customer.tier == "Gold" && Order.total > 100
+    then
+        Order.discount = 0.20;
+}
+
+rule "FlashSale" salience 30 {
+    when
+        Product.category == "Electronics" && Product.stock > 50
+    then
+        Product.discount = 0.25;
+}

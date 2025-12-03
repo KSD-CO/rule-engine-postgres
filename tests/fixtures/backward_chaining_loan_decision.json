@@ -1,0 +1,29 @@
+{
+  "Applicant": {
+    "data": {
+      "age": 35,
+      "income": 80000,
+      "creditScore": 720,
+      "employment": "full-time",
+      "employmentYears": 8,
+      "existingDebt": 15000,
+      "requestedAmount": 50000
+    },
+    "checks": {
+      "hasStableIncome": false,
+      "hasGoodCredit": false,
+      "hasLowDebtRatio": false,
+      "meetsAgeRequirement": false,
+      "hasLongEmployment": false
+    },
+    "eligibility": {
+      "qualifiesForLoan": false,
+      "qualifiesForPremiumRate": false,
+      "qualifiesForStandardRate": false
+    },
+    "decision": "pending",
+    "interestRate": 0,
+    "maxLoanAmount": 0,
+    "reasoning": []
+  }
+}

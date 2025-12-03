@@ -1,0 +1,11 @@
+{
+  "Patient": {
+    "age": 68,
+    "bmi": 32.0,
+    "bloodPressure": "high",
+    "diabetes": true,
+    "smoking": false,
+    "riskScore": 0,
+    "riskLevel": "low"
+  }
+}

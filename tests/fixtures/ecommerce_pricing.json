@@ -1,0 +1,15 @@
+{
+  "Order": {
+    "items": 12,
+    "total": 150,
+    "discount": 0
+  },
+  "Customer": {
+    "tier": "Gold",
+    "id": 1001
+  },
+  "Product": {
+    "category": "Electronics",
+    "stock": 75
+  }
+}

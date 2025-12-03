@@ -1,0 +1,16 @@
+{
+  "Applicant": {
+    "name": "John Doe",
+    "creditScore": 780,
+    "income": 75000,
+    "debtToIncome": 0.25,
+    "employmentYears": 5,
+    "approved": false,
+    "maxAmount": 0,
+    "interestRate": 0
+  },
+  "Policy": {
+    "minCreditScore": 650,
+    "maxDebtRatio": 0.4
+  }
+}

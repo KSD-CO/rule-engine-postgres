@@ -1,0 +1,78 @@
+// Backward Chaining Example: Medical Diagnosis
+// Goal: Determine diagnosis by working backwards from symptoms
+
+// High-level diagnosis rules (work backwards to these)
+rule "DiagnoseFlu" salience 100 {
+    when
+        Rules.hasFlu == true
+    then
+        Patient.diagnosis = "Influenza";
+        Patient.severity = "moderate";
+        Patient.treatment = "Rest, fluids, antiviral medication";
+}
+
+rule "DiagnosePneumonia" salience 100 {
+    when
+        Rules.hasPneumonia == true
+    then
+        Patient.diagnosis = "Pneumonia";
+        Patient.severity = "severe";
+        Patient.treatment = "Antibiotics, possible hospitalization";
+        Rules.needsHospitalization = true;
+}
+
+rule "DiagnoseCommonCold" salience 100 {
+    when
+        Rules.hasCommonCold == true
+    then
+        Patient.diagnosis = "Common Cold";
+        Patient.severity = "mild";
+        Patient.treatment = "Rest, fluids, over-the-counter medication";
+}
+
+// Intermediate rules (infer from symptoms)
+rule "InferFlu" salience 200 {
+    when
+        Patient.symptoms.fever == true &&
+        Patient.symptoms.cough == true &&
+        Patient.symptoms.fatigue == true &&
+        Patient.vitals.temperature >= 38.0
+    then
+        Rules.hasFlu = true;
+}
+
+rule "InferPneumonia" salience 200 {
+    when
+        Patient.symptoms.fever == true &&
+        Patient.symptoms.cough == true &&
+        Patient.symptoms.shortnessOfBreath == true &&
+        Patient.symptoms.chestPain == true
+    then
+        Rules.hasPneumonia = true;
+        Rules.needsAntibiotics = true;
+}
+
+rule "InferCommonCold" salience 200 {
+    when
+        Patient.symptoms.fever == false &&
+        Patient.symptoms.cough == true &&
+        Patient.symptoms.fatigue == true &&
+        Patient.symptoms.shortnessOfBreath == false
+    then
+        Rules.hasCommonCold = true;
+}
+
+// Treatment rules based on inferred conditions
+rule "PrescribeAntibiotics" salience 50 {
+    when
+        Rules.needsAntibiotics == true
+    then
+        Patient.treatment = Patient.treatment + " [ANTIBIOTICS REQUIRED]";
+}
+
+rule "RecommendHospitalization" salience 50 {
+    when
+        Rules.needsHospitalization == true
+    then
+        Patient.treatment = Patient.treatment + " [IMMEDIATE HOSPITALIZATION]";
+}

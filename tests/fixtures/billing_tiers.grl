@@ -1,0 +1,45 @@
+rule "FreeTier" salience 100 {
+    when
+        Usage.apiCalls <= 1000 && Usage.storageGB <= 5 && Usage.users <= 3
+    then
+        Usage.tier = "free";
+        Usage.baseCharge = 0;
+}
+
+rule "StarterTier" salience 90 {
+    when
+        Usage.apiCalls > 1000 && Usage.apiCalls <= 10000
+    then
+        Usage.tier = "starter";
+        Usage.baseCharge = 29;
+}
+
+rule "ProTier" salience 80 {
+    when
+        Usage.apiCalls > 10000 && Usage.apiCalls <= 100000
+    then
+        Usage.tier = "pro";
+        Usage.baseCharge = 99;
+}
+
+rule "EnterpriseTier" salience 70 {
+    when
+        Usage.apiCalls > 100000
+    then
+        Usage.tier = "enterprise";
+        Usage.baseCharge = 499;
+}
+
+rule "StorageOverage" salience 60 {
+    when
+        Usage.storageGB > 50
+    then
+        Usage.overageCharge = Usage.overageCharge + ((Usage.storageGB - 50) * 0.10);
+}
+
+rule "UserOverage" salience 50 {
+    when
+        Usage.users > 10
+    then
+        Usage.overageCharge = Usage.overageCharge + ((Usage.users - 10) * 5);
+}

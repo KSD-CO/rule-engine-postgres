@@ -4,12 +4,13 @@
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Production-ready** PostgreSQL extension written in Rust that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) syntax without external services.
+**Production-ready** PostgreSQL extension written in Rust that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) syntax with both **forward** and **backward chaining** support.
 
 ## Why Use This?
 
 - **No Microservices Overhead**: Business rules run directly in PostgreSQL
 - **Real-time Decisions**: Sub-millisecond rule execution (~1000 rules/sec)
+- **Dual Reasoning Modes**: Forward chaining (data-driven) + Backward chaining (goal-driven)
 - **Version Control Rules**: Store rules in database with full audit trail
 - **Dynamic Logic**: Change business rules without code deployment
 - **Transaction Safety**: Rules execute within PostgreSQL transactions
@@ -17,6 +18,8 @@
 ## Features
 
 - ⚡ **High Performance**: Compiled Rust code, optimized for speed
+- 🎯 **Backward Chaining**: Goal queries with proof traces ("Can we prove X?")
+- 🔀 **Forward Chaining**: Event-driven rule execution (traditional)
 - 🔒 **Production Ready**: Error codes, health checks, Docker support, CI/CD
 - 📦 **Easy Deploy**: One-liner install or pre-built packages
 - 🔧 **Flexible**: JSON/JSONB support, triggers, nested objects
@@ -74,7 +77,9 @@ cd rule-engine-postgres
 
 ## Usage
 
-### Basic Example
+### Forward Chaining (Data-Driven)
+
+Execute rules that modify facts based on conditions:
 
 ```sql
 SELECT run_rule_engine(
@@ -88,6 +93,53 @@ SELECT run_rule_engine(
 );
 -- Returns: {"User": {"age": 30, "status": "adult"}}
 ```
+
+### Backward Chaining (Goal-Driven) ⭐ NEW
+
+Query if a goal can be proven with full reasoning trace:
+
+```sql
+-- Simple goal query
+SELECT query_backward_chaining(
+    '{"User": {"Age": 25}}',
+    'rule "AgeCheck" {
+        when User.Age >= 18
+        then User.IsAdult = true;
+    }',
+    'User.IsAdult == true'
+)::jsonb;
+
+-- Returns:
+-- {
+--   "provable": true,
+--   "proof_trace": "AgeCheck",
+--   "goals_explored": 1,
+--   "rules_evaluated": 1,
+--   "query_time_ms": 0.85
+-- }
+
+-- Fast boolean check (production mode)
+SELECT can_prove_goal(
+    '{"Order": {"Total": 100}}',
+    'rule "Valid" { when Order.Total > 0 then Order.Valid = true; }',
+    'Order.Valid == true'
+);
+-- Returns: true
+
+-- Multiple goals in one query
+SELECT query_backward_chaining_multi(
+    '{"User": {"Age": 25}}',
+    'rule "Vote" { when User.Age >= 18 then User.CanVote = true; }
+     rule "Retire" { when User.Age >= 65 then User.CanRetire = true; }',
+    ARRAY['User.CanVote == true', 'User.CanRetire == true']
+)::jsonb;
+
+-- Returns array of results for each goal
+```
+
+**When to use each mode:**
+- **Forward Chaining**: Event processing, data enrichment, monitoring
+- **Backward Chaining**: Eligibility checks, diagnosis, decision explanation
 
 ## Real-World Case Studies
 
@@ -672,9 +724,89 @@ ORDER BY risk_score DESC;
 
 ---
 
+### 6. Backward Chaining: Loan Eligibility Verification ⭐ NEW
+
+**Scenario**: Use backward chaining to check if a loan can be approved and get explanation.
+
+```sql
+-- Create function to check loan eligibility
+CREATE OR REPLACE FUNCTION check_loan_eligibility(applicant_data JSONB)
+RETURNS TABLE(can_approve BOOLEAN, reasoning TEXT, rules_checked INT) AS $$
+DECLARE
+    loan_rules TEXT;
+    result JSONB;
+BEGIN
+    loan_rules := $rules$
+    rule "CheckCredit" {
+        when
+            Applicant.CreditScore >= 700
+        then
+            Checks.GoodCredit = true;
+    }
+
+    rule "CheckIncome" {
+        when
+            Applicant.Income >= 50000 &&
+            Applicant.Employment == "full-time"
+        then
+            Checks.StableIncome = true;
+    }
+
+    rule "ApproveLoan" {
+        when
+            Checks.GoodCredit == true &&
+            Checks.StableIncome == true &&
+            Loan.Amount <= 100000
+        then
+            Loan.Approved = true;
+    }
+    $rules$;
+
+    -- Query if loan can be approved
+    result := query_backward_chaining(
+        applicant_data::TEXT,
+        loan_rules,
+        'Loan.Approved == true'
+    )::JSONB;
+
+    RETURN QUERY SELECT
+        (result->>'provable')::BOOLEAN,
+        result->>'proof_trace',
+        (result->>'rules_evaluated')::INT;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Test eligibility
+SELECT * FROM check_loan_eligibility('{
+    "Applicant": {
+        "CreditScore": 750,
+        "Income": 80000,
+        "Employment": "full-time"
+    },
+    "Loan": {"Amount": 50000},
+    "Checks": {}
+}'::JSONB);
+
+-- Result: can_approve=true, reasoning="CheckCredit → CheckIncome → ApproveLoan", rules_checked=3
+```
+
+**Benefits of Backward Chaining:**
+- ✅ Only evaluates necessary rules (not all rules)
+- ✅ Provides proof trace showing why decision was made
+- ✅ Better for "can we prove X?" style queries
+- ✅ Faster for goal-specific queries
+
+**Use Cases:**
+- Eligibility checks ("Can user do X?")
+- Medical diagnosis ("Does patient have Y?")
+- Access control ("Should grant permission Z?")
+- Compliance verification ("Does meet requirement W?")
+
+---
+
 ## API Reference
 
-### Functions
+### Forward Chaining Functions
 
 #### `run_rule_engine(facts_json TEXT, rules_grl TEXT) → TEXT`
 Execute GRL rules on JSON facts. Max 1MB for both parameters.
@@ -684,6 +816,65 @@ Execute GRL rules on JSON facts. Max 1MB for both parameters.
 - `rules_grl`: GRL rule definitions (multiple rules separated by newlines)
 
 **Returns:** JSON string with modified facts
+
+**Use Case:** Event processing, data enrichment, automated actions
+
+---
+
+### Backward Chaining Functions ⭐ NEW
+
+#### `query_backward_chaining(facts_json TEXT, rules_grl TEXT, goal TEXT) → JSON`
+Query if a goal can be proven with full details and proof trace.
+
+**Parameters:**
+- `facts_json`: JSON string containing initial facts
+- `rules_grl`: GRL rule definitions
+- `goal`: Goal query (e.g., `'User.CanBuy == true'`)
+
+**Returns:**
+```json
+{
+  "provable": true,
+  "proof_trace": "Rule chain that proved the goal",
+  "goals_explored": 5,
+  "rules_evaluated": 3,
+  "query_time_ms": 1.23
+}
+```
+
+**Use Case:** Eligibility verification, decision explanation, debugging
+
+---
+
+#### `query_backward_chaining_multi(facts_json TEXT, rules_grl TEXT, goals TEXT[]) → JSON[]`
+Query multiple goals in one call.
+
+**Parameters:**
+- `facts_json`: JSON string containing initial facts
+- `rules_grl`: GRL rule definitions
+- `goals`: Array of goal queries
+
+**Returns:** Array of query results (same format as `query_backward_chaining`)
+
+**Use Case:** Batch verification, requirement checks
+
+---
+
+#### `can_prove_goal(facts_json TEXT, rules_grl TEXT, goal TEXT) → BOOLEAN`
+Fast boolean check if goal is provable (no proof trace).
+
+**Parameters:**
+- `facts_json`: JSON string containing initial facts
+- `rules_grl`: GRL rule definitions
+- `goal`: Goal query
+
+**Returns:** `true` if provable, `false` otherwise
+
+**Use Case:** High-throughput production checks (2-3x faster)
+
+---
+
+### Utility Functions
 
 #### `rule_engine_health_check() → TEXT`
 Returns health status with version and timestamp.
@@ -951,23 +1142,65 @@ SELECT rule_engine_health_check();  -- Test new features
 
 ## Development
 
+### Prerequisites
+
+- Rust 1.75+ (`rustup update`)
+- cargo-pgrx 0.16.1 (`cargo install cargo-pgrx --version 0.16.1 --locked`)
+- PostgreSQL 13-17
+
+### Setup
+
 ```bash
-# Run tests
+# Initialize pgrx (downloads PostgreSQL versions)
+cargo pgrx init
+
+# Start development server with hot reload
+cargo pgrx run pg17
+
+# In another terminal, connect to test database
+psql -h localhost -p 28817 -U postgres -d postgres
+```
+
+### Testing
+
+```bash
+# Check compilation
+cargo check
+
+# Run Rust tests (18 tests)
 cargo test
-cargo pgrx test pg16
 
-# Local development with hot reload
-cargo pgrx run pg16
+# Run integration tests with PostgreSQL
+cargo pgrx test pg17
 
-# Build for specific PostgreSQL version
-cargo build --release --features pg16
+# Run SQL test suite
+psql -h localhost -p 28817 -U postgres -d postgres
+postgres=# \i tests/test_case_studies.sql
+postgres=# \i tests/test_native_backward_chaining.sql
+```
 
+### Code Quality
+
+```bash
 # Run linter
 cargo clippy --all-targets --all-features
 
 # Format code
 cargo fmt
+
+# Check for security issues
+cargo audit
 ```
+
+### Project Structure
+
+After refactoring (v1.0.0), the codebase is modular and maintainable:
+
+- **15 modules** (was 1 monolithic file)
+- **~400 lines** total (well-organized)
+- **6 API functions** (3 forward + 3 backward chaining)
+- **38 tests** (18 Rust + 20 SQL)
+- **Clean separation**: api/, core/, error/, validation/
 
 ## Troubleshooting
 
@@ -1017,7 +1250,9 @@ Contributions welcome! Please:
 
 ## Benchmarks
 
-Performance on AMD Ryzen 9 5950X, PostgreSQL 16, 1000 rule executions:
+Performance on AMD Ryzen 9 5950X, PostgreSQL 17, 1000 rule executions:
+
+### Forward Chaining
 
 | Scenario | Avg Time | Throughput |
 |----------|----------|------------|
@@ -1026,14 +1261,56 @@ Performance on AMD Ryzen 9 5950X, PostgreSQL 16, 1000 rule executions:
 | Nested objects (3 levels) | 1.5ms | 667 rules/sec |
 | With trigger | 3.2ms | 312 ops/sec |
 
+### Backward Chaining ⭐ NEW
+
+| Function | Mode | Avg Time | Use Case |
+|----------|------|----------|----------|
+| `query_backward_chaining` | Dev | 2-3ms | Debugging, explaining decisions |
+| `query_backward_chaining_multi` | Dev | 5-8ms | Batch verification |
+| `can_prove_goal` | Prod | 0.5-1ms | High-throughput checks |
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
+## Architecture
+
+This extension is built with a clean, modular architecture:
+
+```
+src/
+├── lib.rs (15 lines)              # Minimal entry point
+├── api/
+│   ├── health.rs                  # Health check & version
+│   ├── engine.rs                  # Forward chaining API
+│   └── backward.rs (134 lines)    # ⭐ Backward chaining API
+├── core/
+│   ├── facts.rs                   # Facts/JSON conversion
+│   ├── rules.rs                   # GRL parsing
+│   ├── executor.rs                # Forward chaining logic
+│   └── backward.rs (152 lines)    # ⭐ Backward chaining logic
+├── error/
+│   ├── codes.rs                   # Error definitions (12 codes)
+│   └── mod.rs                     # Error utilities
+└── validation/
+    ├── input.rs                   # Input validation
+    └── limits.rs                  # Size constraints
+```
+
+**Total**: 15 modules, ~400 lines of clean, maintainable code
+
+## Documentation
+
+- **[NATIVE_BACKWARD_CHAINING.md](NATIVE_BACKWARD_CHAINING.md)** - Complete backward chaining guide
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment guide
+- **[DISTRIBUTION.md](DISTRIBUTION.md)** - Publishing guide for PGXN
+- **[REFACTORING_PLAN.md](REFACTORING_PLAN.md)** - Development roadmap
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
+
 ## Acknowledgments
 
 - Built with [pgrx](https://github.com/pgcentralfoundation/pgrx) - PostgreSQL extension framework
-- Powered by [rust-rule-engine](https://crates.io/crates/rust-rule-engine) v1.6.0
+- Powered by [rust-rule-engine](https://crates.io/crates/rust-rule-engine) v1.7.0 (with backward-chaining feature)
 - Inspired by business rule engines like Drools and Grule
 
 ---

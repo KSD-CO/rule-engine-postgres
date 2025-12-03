@@ -1,0 +1,34 @@
+rule "HighCreditScore" salience 100 {
+    when
+        Applicant.creditScore >= 750 && Applicant.income >= 50000
+    then
+        Applicant.approved = true;
+        Applicant.maxAmount = Applicant.income * 3;
+        Applicant.interestRate = 3.5;
+}
+
+rule "MediumCredit" salience 90 {
+    when
+        Applicant.creditScore >= 650 && Applicant.creditScore < 750 &&
+        Applicant.debtToIncome < 0.4
+    then
+        Applicant.approved = true;
+        Applicant.maxAmount = Applicant.income * 2;
+        Applicant.interestRate = 5.5;
+}
+
+rule "LowCredit" salience 80 {
+    when
+        Applicant.creditScore < 650 || Applicant.debtToIncome >= 0.4
+    then
+        Applicant.approved = false;
+        Applicant.reason = "Credit score too low or debt ratio too high";
+}
+
+rule "EmploymentVerification" salience 70 {
+    when
+        Applicant.employmentYears < 2
+    then
+        Applicant.maxAmount = Applicant.maxAmount * 0.8;
+        Applicant.interestRate = Applicant.interestRate + 0.5;
+}

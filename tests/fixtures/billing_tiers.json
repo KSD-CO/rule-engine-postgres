@@ -1,0 +1,10 @@
+{
+  "Usage": {
+    "apiCalls": 50000,
+    "storageGB": 75,
+    "users": 15,
+    "tier": "free",
+    "baseCharge": 0,
+    "overageCharge": 0
+  }
+}

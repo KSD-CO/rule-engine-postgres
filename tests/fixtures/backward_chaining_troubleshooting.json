@@ -1,0 +1,21 @@
+{
+  "System": {
+    "observations": {
+      "serverNotResponding": true,
+      "pingFails": true,
+      "logsShowErrors": true,
+      "diskSpaceAvailable": 5,
+      "memoryUsage": 95,
+      "cpuUsage": 85
+    },
+    "diagnostics": {
+      "networkIssue": false,
+      "resourceExhaustion": false,
+      "applicationCrash": false,
+      "databaseDown": false
+    },
+    "rootCause": "unknown",
+    "solution": "investigating",
+    "priority": "unknown"
+  }
+}

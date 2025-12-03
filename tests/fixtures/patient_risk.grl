@@ -1,0 +1,55 @@
+rule "AgeRisk" salience 100 {
+    when
+        Patient.age > 65
+    then
+        Patient.riskScore = Patient.riskScore + 15;
+}
+
+rule "ObesityRisk" salience 90 {
+    when
+        Patient.bmi > 30
+    then
+        Patient.riskScore = Patient.riskScore + 20;
+}
+
+rule "HypertensionRisk" salience 80 {
+    when
+        Patient.bloodPressure == "high"
+    then
+        Patient.riskScore = Patient.riskScore + 25;
+}
+
+rule "DiabetesRisk" salience 70 {
+    when
+        Patient.diabetes == true
+    then
+        Patient.riskScore = Patient.riskScore + 30;
+}
+
+rule "SmokingRisk" salience 60 {
+    when
+        Patient.smoking == true
+    then
+        Patient.riskScore = Patient.riskScore + 25;
+}
+
+rule "LowRiskLevel" salience 50 {
+    when
+        Patient.riskScore < 30
+    then
+        Patient.riskLevel = "low";
+}
+
+rule "ModerateRiskLevel" salience 40 {
+    when
+        Patient.riskScore >= 30 && Patient.riskScore < 60
+    then
+        Patient.riskLevel = "moderate";
+}
+
+rule "HighRiskLevel" salience 30 {
+    when
+        Patient.riskScore >= 60
+    then
+        Patient.riskLevel = "high";
+}

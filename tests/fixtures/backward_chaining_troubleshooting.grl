@@ -1,0 +1,82 @@
+// Backward Chaining Example: IT System Troubleshooting
+// Goal: Find root cause by working backwards from symptoms
+
+// Goal rules - Root cause identification
+rule "IdentifyNetworkIssue" salience 100 {
+    when
+        System.diagnostics.networkIssue == true
+    then
+        System.rootCause = "Network connectivity failure";
+        System.solution = "Check network cables, router, firewall rules";
+        System.priority = "high";
+}
+
+rule "IdentifyResourceExhaustion" salience 100 {
+    when
+        System.diagnostics.resourceExhaustion == true
+    then
+        System.rootCause = "Server resource exhaustion";
+        System.solution = "Free up disk space, restart services, scale resources";
+        System.priority = "critical";
+}
+
+rule "IdentifyApplicationCrash" salience 100 {
+    when
+        System.diagnostics.applicationCrash == true
+    then
+        System.rootCause = "Application crashed or hung";
+        System.solution = "Restart application, check logs, debug code";
+        System.priority = "high";
+}
+
+rule "IdentifyDatabaseDown" salience 100 {
+    when
+        System.diagnostics.databaseDown == true
+    then
+        System.rootCause = "Database service unavailable";
+        System.solution = "Restart database, check connections, verify credentials";
+        System.priority = "critical";
+}
+
+// Inference rules - Work backwards from observations
+rule "InferNetworkIssue" salience 200 {
+    when
+        System.observations.serverNotResponding == true &&
+        System.observations.pingFails == true
+    then
+        System.diagnostics.networkIssue = true;
+}
+
+rule "InferResourceExhaustion" salience 200 {
+    when
+        System.observations.diskSpaceAvailable < 10 ||
+        System.observations.memoryUsage > 90 ||
+        System.observations.cpuUsage > 90
+    then
+        System.diagnostics.resourceExhaustion = true;
+}
+
+rule "InferApplicationCrash" salience 200 {
+    when
+        System.observations.serverNotResponding == true &&
+        System.observations.logsShowErrors == true &&
+        System.observations.pingFails == false
+    then
+        System.diagnostics.applicationCrash = true;
+}
+
+rule "InferDatabaseDown" salience 200 {
+    when
+        System.observations.logsShowErrors == true &&
+        System.observations.serverNotResponding == true
+    then
+        System.diagnostics.databaseDown = true;
+}
+
+// Escalation rules
+rule "EscalateCriticalIssue" salience 50 {
+    when
+        System.priority == "critical"
+    then
+        System.solution = System.solution + " [ESCALATE TO SENIOR ENGINEER]";
+}

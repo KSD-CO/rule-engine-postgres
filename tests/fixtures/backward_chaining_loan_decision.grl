@@ -1,0 +1,105 @@
+// Backward Chaining Example: Loan Approval Decision Tree
+// Goal: Approve loan by verifying all prerequisites backwards
+
+// Goal rules - Final decisions
+rule "ApprovePremiumLoan" salience 100 {
+    when
+        Applicant.eligibility.qualifiesForPremiumRate == true
+    then
+        Applicant.decision = "approved";
+        Applicant.interestRate = 3.5;
+        Applicant.maxLoanAmount = Applicant.data.income * 4;
+}
+
+rule "ApproveStandardLoan" salience 90 {
+    when
+        Applicant.eligibility.qualifiesForStandardRate == true &&
+        Applicant.eligibility.qualifiesForPremiumRate == false
+    then
+        Applicant.decision = "approved";
+        Applicant.interestRate = 5.5;
+        Applicant.maxLoanAmount = Applicant.data.income * 3;
+}
+
+rule "RejectLoan" salience 80 {
+    when
+        Applicant.eligibility.qualifiesForLoan == false
+    then
+        Applicant.decision = "rejected";
+        Applicant.interestRate = 0;
+        Applicant.maxLoanAmount = 0;
+}
+
+// Eligibility inference rules
+rule "InferPremiumEligibility" salience 200 {
+    when
+        Applicant.checks.hasGoodCredit == true &&
+        Applicant.checks.hasStableIncome == true &&
+        Applicant.checks.hasLowDebtRatio == true &&
+        Applicant.checks.hasLongEmployment == true
+    then
+        Applicant.eligibility.qualifiesForPremiumRate = true;
+        Applicant.eligibility.qualifiesForLoan = true;
+}
+
+rule "InferStandardEligibility" salience 200 {
+    when
+        Applicant.checks.hasGoodCredit == true &&
+        Applicant.checks.hasStableIncome == true &&
+        Applicant.checks.meetsAgeRequirement == true
+    then
+        Applicant.eligibility.qualifiesForStandardRate = true;
+        Applicant.eligibility.qualifiesForLoan = true;
+}
+
+// Base checks - Verify prerequisites
+rule "CheckGoodCredit" salience 300 {
+    when
+        Applicant.data.creditScore >= 700
+    then
+        Applicant.checks.hasGoodCredit = true;
+}
+
+rule "CheckStableIncome" salience 300 {
+    when
+        Applicant.data.income >= 50000 &&
+        Applicant.data.employment == "full-time"
+    then
+        Applicant.checks.hasStableIncome = true;
+}
+
+rule "CheckLowDebtRatio" salience 300 {
+    when
+        Applicant.data.existingDebt < (Applicant.data.income * 0.3)
+    then
+        Applicant.checks.hasLowDebtRatio = true;
+}
+
+rule "CheckAgeRequirement" salience 300 {
+    when
+        Applicant.data.age >= 21 && Applicant.data.age <= 65
+    then
+        Applicant.checks.meetsAgeRequirement = true;
+}
+
+rule "CheckLongEmployment" salience 300 {
+    when
+        Applicant.data.employmentYears >= 5
+    then
+        Applicant.checks.hasLongEmployment = true;
+}
+
+// Reasoning rules
+rule "ExplainApproval" salience 10 {
+    when
+        Applicant.decision == "approved"
+    then
+        Applicant.reasoning = ["Credit score meets threshold", "Income verification passed", "Debt ratio acceptable", "Employment stable"];
+}
+
+rule "ExplainRejection" salience 10 {
+    when
+        Applicant.decision == "rejected"
+    then
+        Applicant.reasoning = ["Failed to meet minimum requirements", "Check credit score, income, or debt ratio"];
+}

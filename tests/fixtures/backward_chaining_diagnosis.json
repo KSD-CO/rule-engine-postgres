@@ -1,0 +1,26 @@
+{
+  "Patient": {
+    "symptoms": {
+      "fever": true,
+      "cough": true,
+      "fatigue": true,
+      "shortnessOfBreath": false,
+      "chestPain": false
+    },
+    "vitals": {
+      "temperature": 38.5,
+      "heartRate": 95,
+      "bloodPressure": "120/80"
+    },
+    "diagnosis": "unknown",
+    "treatment": "none",
+    "severity": "unknown"
+  },
+  "Rules": {
+    "hasCommonCold": false,
+    "hasFlu": false,
+    "hasPneumonia": false,
+    "needsAntibiotics": false,
+    "needsHospitalization": false
+  }
+}
