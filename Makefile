@@ -1,19 +1,37 @@
 # Makefile for rule_engine_postgre_extensions
-# For PGXN compatibility
+# For PGXN compatibility and easy building
 
 EXTENSION = rule_engine_postgre_extensions
 DATA = rule_engine_postgre_extensions--1.0.0.sql \
        rule_engine_postgre_extensions--0.1.0--1.0.0.sql
 DOCS = README.md DEPLOYMENT.md
+VERSION = 1.0.0
+PG_VERSION ?= 16
 
 # Build with cargo-pgrx
 PG_CONFIG = pg_config
 SHLIB_LINK = -lpq
 
+.PHONY: all build install clean test deb deb-all help
+
 all: build
 
+help:
+	@echo "Available targets:"
+	@echo "  make build          - Build extension (default PG 16)"
+	@echo "  make build PG_VERSION=17 - Build for PostgreSQL 17"
+	@echo "  make install        - Install extension"
+	@echo "  make test           - Run tests"
+	@echo "  make deb            - Build .deb package (default PG 16)"
+	@echo "  make deb PG_VERSION=17 - Build .deb for PostgreSQL 17"
+	@echo "  make deb-all        - Build .deb for all supported versions"
+	@echo "  make clean          - Clean build artifacts"
+	@echo "  make docker-build   - Build Docker image"
+	@echo "  make docker-run     - Run Docker container"
+
 build:
-	cargo build --release --features pg16
+	@echo "Building for PostgreSQL $(PG_VERSION)..."
+	cargo build --release --no-default-features --features pg$(PG_VERSION)
 
 install: build
 	@echo "Installing extension..."
@@ -23,9 +41,50 @@ install: build
 
 clean:
 	cargo clean
+	rm -rf postgresql-*-rule-engine_*_amd64/
+	rm -rf dist/
+	rm -rf releases/
 
 test:
 	cargo test
-	cargo pgrx test
+	cargo pgrx test pg$(PG_VERSION)
 
-.PHONY: all build install clean test
+# Build .deb package
+deb:
+	@echo "Building .deb package for PostgreSQL $(PG_VERSION)..."
+	chmod +x build-deb.sh
+	./build-deb.sh $(PG_VERSION)
+
+# Build .deb for all supported PostgreSQL versions
+deb-all:
+	@echo "Building .deb packages for all PostgreSQL versions..."
+	$(MAKE) clean
+	$(MAKE) deb PG_VERSION=16
+	$(MAKE) clean
+	$(MAKE) deb PG_VERSION=17
+	@echo "✅ All packages built!"
+	@ls -lh releases/download/v*/postgresql-*.deb
+
+# Docker targets
+docker-build:
+	@echo "Building Docker image..."
+	docker build -t rule-engine-postgres:latest .
+	docker build -t rule-engine-postgres:$(VERSION) .
+
+docker-run:
+	@echo "Running Docker container..."
+	docker-compose up -d
+
+docker-stop:
+	docker-compose down
+
+docker-clean:
+	docker-compose down -v
+	docker rmi rule-engine-postgres:latest rule-engine-postgres:$(VERSION) || true
+fmt:
+	cargo fmt --all
+ci:
+	cargo fmt --all -- --check
+	cargo clippy -- -D warnings
+	cargo test
+	

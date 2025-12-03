@@ -1,0 +1,5 @@
+# Allow all files in releases directory
+# This directory contains pre-built .deb packages for users to download
+!*.deb
+!download/
+!download/**/*

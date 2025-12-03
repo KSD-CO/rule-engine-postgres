@@ -1,4 +1,4 @@
-use rust_rule_engine::{Facts, RustRuleEngine, GRLParser, Value};
+use rust_rule_engine::{Facts, GRLParser, RustRuleEngine, Value};
 
 /// Error codes for better error handling
 mod error_codes {
@@ -21,7 +21,8 @@ fn create_error_response(code: &str, message: &str) -> String {
         "error": message,
         "error_code": code,
         "timestamp": chrono::Utc::now().to_rfc3339()
-    }).to_string()
+    })
+    .to_string()
 }
 
 /// Health check function to verify the extension is loaded and working
@@ -32,7 +33,8 @@ pub fn rule_engine_health_check() -> String {
         "extension": "rule_engine_postgre_extensions",
         "version": env!("CARGO_PKG_VERSION"),
         "timestamp": chrono::Utc::now().to_rfc3339()
-    }).to_string()
+    })
+    .to_string()
 }
 
 /// Get extension version information
@@ -45,44 +47,40 @@ pub fn rule_engine_version() -> String {
 pub fn run_rule_engine(facts_json: &str, rules_grl: &str) -> String {
     // Validate inputs
     if facts_json.is_empty() {
-        return create_error_response(
-            error_codes::EMPTY_FACTS,
-            "Facts JSON cannot be empty"
-        );
+        return create_error_response(error_codes::EMPTY_FACTS, "Facts JSON cannot be empty");
     }
     if rules_grl.is_empty() {
-        return create_error_response(
-            error_codes::EMPTY_RULES,
-            "Rules GRL cannot be empty"
-        );
+        return create_error_response(error_codes::EMPTY_RULES, "Rules GRL cannot be empty");
     }
     if facts_json.len() > 1_000_000 {
         return create_error_response(
             error_codes::FACTS_TOO_LARGE,
-            "Facts JSON too large (max 1MB)"
+            "Facts JSON too large (max 1MB)",
         );
     }
     if rules_grl.len() > 1_000_000 {
         return create_error_response(
             error_codes::RULES_TOO_LARGE,
-            "Rules GRL too large (max 1MB)"
+            "Rules GRL too large (max 1MB)",
         );
     }
 
     // Parse facts from JSON
     let json_val = match serde_json::from_str::<serde_json::Value>(facts_json) {
         Ok(v) => v,
-        Err(e) => return create_error_response(
-            error_codes::INVALID_JSON,
-            &format!("Invalid JSON syntax in facts: {}", e)
-        ),
+        Err(e) => {
+            return create_error_response(
+                error_codes::INVALID_JSON,
+                &format!("Invalid JSON syntax in facts: {}", e),
+            )
+        }
     };
 
     // Validate that facts is a JSON object
     if !json_val.is_object() {
         return create_error_response(
             error_codes::NON_OBJECT_JSON,
-            "Facts must be a JSON object, not an array or primitive"
+            "Facts must be a JSON object, not an array or primitive",
         );
     }
 
@@ -94,7 +92,7 @@ pub fn run_rule_engine(facts_json: &str, rules_grl: &str) -> String {
             if let Err(e) = facts.add_value(&key, value.into()) {
                 return create_error_response(
                     error_codes::FACT_ADD_FAILED,
-                    &format!("Failed to add fact '{}': {}", key, e)
+                    &format!("Failed to add fact '{}': {}", key, e),
                 );
             }
         }
@@ -106,15 +104,17 @@ pub fn run_rule_engine(facts_json: &str, rules_grl: &str) -> String {
             if r.is_empty() {
                 return create_error_response(
                     error_codes::NO_RULES_FOUND,
-                    "No valid rules found in GRL"
+                    "No valid rules found in GRL",
                 );
             }
             r
-        },
-        Err(e) => return create_error_response(
-            error_codes::INVALID_GRL,
-            &format!("Invalid GRL syntax: {}", e)
-        ),
+        }
+        Err(e) => {
+            return create_error_response(
+                error_codes::INVALID_GRL,
+                &format!("Invalid GRL syntax: {}", e),
+            )
+        }
     };
 
     let kb = rust_rule_engine::KnowledgeBase::new("PostgresExtension");
@@ -135,7 +135,7 @@ pub fn run_rule_engine(facts_json: &str, rules_grl: &str) -> String {
         if let Err(e) = engine.knowledge_base_mut().add_rule(rule) {
             return create_error_response(
                 error_codes::RULE_ADD_FAILED,
-                &format!("Failed to add rule #{}: {}", idx + 1, e)
+                &format!("Failed to add rule #{}: {}", idx + 1, e),
             );
         }
     }
@@ -148,13 +148,13 @@ pub fn run_rule_engine(facts_json: &str, rules_grl: &str) -> String {
                 Ok(json_str) => json_str,
                 Err(e) => create_error_response(
                     error_codes::SERIALIZATION_FAILED,
-                    &format!("Failed to serialize result: {}", e)
+                    &format!("Failed to serialize result: {}", e),
                 ),
             }
-        },
+        }
         Err(e) => create_error_response(
             error_codes::EXECUTION_FAILED,
-            &format!("Rule execution failed: {}", e)
+            &format!("Rule execution failed: {}", e),
         ),
     }
 }
@@ -164,11 +164,9 @@ fn engine_value_to_json(value: &Value) -> serde_json::Value {
         Value::Null => serde_json::Value::Null,
         Value::Boolean(b) => serde_json::Value::Bool(*b),
         Value::Integer(i) => serde_json::Value::Number((*i).into()),
-        Value::Number(n) => {
-            serde_json::Number::from_f64(*n)
-                .map(serde_json::Value::Number)
-                .unwrap_or(serde_json::Value::Null)
-        }
+        Value::Number(n) => serde_json::Number::from_f64(*n)
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
         Value::String(s) => serde_json::Value::String(s.clone()),
         Value::Object(map) => {
             let mut obj = serde_json::Map::new();

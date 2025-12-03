@@ -24,6 +24,13 @@
 *.dylib
 *.dll
 
+# Distribution files
+dist/
+*.deb
+postgresql-*-rule-engine_*/
+
+# NOTE: releases/ folder is NOT ignored - it contains downloadable .deb files for users
+
 # PostgreSQL extension build
 *.bc
 *.o
