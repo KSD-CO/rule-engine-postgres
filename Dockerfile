@@ -30,7 +30,7 @@ COPY rule_engine_postgre_extensions.control ./
 COPY rule_engine_postgre_extensions--0.1.0.sql ./
 
 # Build and install the extension
-RUN cargo pgrx install --release --pg-config /usr/bin/pg_config
+RUN cargo pgrx install --release --no-default-features --features pg17 --pg-config /usr/bin/pg_config
 
 # Clean up build dependencies to reduce image size
 RUN apt-get purge -y \

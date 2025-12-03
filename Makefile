@@ -46,7 +46,7 @@ clean:
 	rm -rf releases/
 
 test:
-	cargo test
+	cargo test --no-default-features --features pg$(PG_VERSION)
 	cargo pgrx test pg$(PG_VERSION)
 
 # Build .deb package
@@ -83,8 +83,9 @@ docker-clean:
 	docker rmi rule-engine-postgres:latest rule-engine-postgres:$(VERSION) || true
 fmt:
 	cargo fmt --all
+
 ci:
 	cargo fmt --all -- --check
-	cargo clippy -- -D warnings
-	cargo test
+	cargo clippy --all-targets --no-default-features --features pg$(PG_VERSION) -- -D warnings
+	cargo test --no-default-features --features pg$(PG_VERSION)
 	
