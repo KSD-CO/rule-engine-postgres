@@ -68,7 +68,7 @@ docker-compose exec postgres psql -U postgres -d ruleengine \
 ### Option 4: Build from Source
 
 ```bash
-# Prerequisites: Rust 1.75+, PostgreSQL 13-17
+# Prerequisites: Rust 1.75+, PostgreSQL 16-17
 cargo install cargo-pgrx --version 0.16.1 --locked
 git clone https://github.com/KSD-CO/rule-engine-postgres.git
 cd rule-engine-postgres
@@ -1146,7 +1146,7 @@ SELECT rule_engine_health_check();  -- Test new features
 
 - Rust 1.75+ (`rustup update`)
 - cargo-pgrx 0.16.1 (`cargo install cargo-pgrx --version 0.16.1 --locked`)
-- PostgreSQL 13-17
+- PostgreSQL 16-17
 
 ### Setup
 

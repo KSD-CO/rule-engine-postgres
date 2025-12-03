@@ -19,14 +19,14 @@ all: build
 help:
 	@echo "Available targets:"
 	@echo "  make build          - Build extension (default PG 17)"
-	@echo "  make build PG_VERSION=14 - Build for PostgreSQL 14"
+	@echo "  make build PG_VERSION=16 - Build for PostgreSQL 16"
 	@echo "  make install        - Install extension"
 	@echo "  make test           - Run tests"
-	@echo "  make ci             - Run CI checks (format, clippy, test)"
+	@echo "  make ci             - Run CI checks (format, clippy, compilation)"
 	@echo "  make fmt            - Format code"
 	@echo "  make deb            - Build .deb package (default PG 17)"
-	@echo "  make deb PG_VERSION=14 - Build .deb for PostgreSQL 14"
-	@echo "  make deb-all        - Build .deb for all supported versions"
+	@echo "  make deb PG_VERSION=16 - Build .deb for PostgreSQL 16"
+	@echo "  make deb-all        - Build .deb for all supported versions (16, 17)"
 	@echo "  make clean          - Clean build artifacts"
 	@echo "  make docker-build   - Build Docker image"
 	@echo "  make docker-run     - Run Docker container"
@@ -59,9 +59,9 @@ deb:
 
 # Build .deb for all supported PostgreSQL versions
 deb-all:
-	@echo "Building .deb packages for all PostgreSQL versions..."
+	@echo "Building .deb packages for all PostgreSQL versions (16, 17)..."
 	$(MAKE) clean
-	$(MAKE) deb PG_VERSION=14
+	$(MAKE) deb PG_VERSION=16
 	$(MAKE) clean
 	$(MAKE) deb PG_VERSION=17
 	@echo "✅ All packages built!"

@@ -76,8 +76,8 @@ chmod +x build-deb.sh
 # Build for PostgreSQL 17
 ./build-deb.sh 17
 
-# Build for PostgreSQL 15
-./build-deb.sh 15
+# Build for PostgreSQL 16
+./build-deb.sh 16
 ```
 
 ### Method 3: Using Cargo Directly
