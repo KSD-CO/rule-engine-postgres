@@ -79,7 +79,7 @@ cd rule-engine-postgres
 ```sql
 SELECT run_rule_engine(
     '{"User": {"age": 30, "status": "active"}}',
-    'rule "CheckAge" {
+    'rule "CheckAge" salience 10 {
         when
             User.age > 18
         then
@@ -106,24 +106,24 @@ CREATE TABLE pricing_rules (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Insert dynamic pricing rules
+-- Insert dynamic pricing rules with priority
 INSERT INTO pricing_rules (name, priority, grl_rule) VALUES
 ('Volume Discount', 10,
- 'rule "VolumeDiscount" {
+ 'rule "VolumeDiscount" salience 10 {
      when
          Order.items >= 10
      then
          Order.discount = 0.15;
  }'),
 ('Loyalty Premium', 20,
- 'rule "LoyaltyBonus" {
+ 'rule "LoyaltyBonus" salience 20 {
      when
          Customer.tier == "Gold" && Order.total > 100
      then
          Order.discount = 0.20;
  }'),
 ('Flash Sale', 30,
- 'rule "FlashSale" {
+ 'rule "FlashSale" salience 30 {
      when
          Product.category == "Electronics" && Product.stock > 50
      then
@@ -197,7 +197,7 @@ BEGIN
 
     -- Define loan approval rules
     rules := $rules$
-    rule "HighCreditScore" {
+    rule "HighCreditScore" salience 100 {
         when
             Applicant.creditScore >= 750 && Applicant.income >= 50000
         then
@@ -206,7 +206,7 @@ BEGIN
             Applicant.interestRate = 3.5;
     }
 
-    rule "MediumCredit" {
+    rule "MediumCredit" salience 90 {
         when
             Applicant.creditScore >= 650 && Applicant.creditScore < 750 &&
             Applicant.debtToIncome < 0.4
@@ -216,7 +216,7 @@ BEGIN
             Applicant.interestRate = 5.5;
     }
 
-    rule "LowCredit" {
+    rule "LowCredit" salience 80 {
         when
             Applicant.creditScore < 650 || Applicant.debtToIncome >= 0.4
         then
@@ -224,7 +224,7 @@ BEGIN
             Applicant.reason = "Credit score too low or debt ratio too high";
     }
 
-    rule "EmploymentVerification" {
+    rule "EmploymentVerification" salience 70 {
         when
             Applicant.employmentYears < 2
         then
@@ -312,7 +312,7 @@ BEGIN
 
     -- Define tiering rules
     billing_rules := $rules$
-    rule "FreeTier" {
+    rule "FreeTier" salience 100 {
         when
             Usage.apiCalls <= 1000 && Usage.storageGB <= 5 && Usage.users <= 3
         then
@@ -320,7 +320,7 @@ BEGIN
             Usage.baseCharge = 0;
     }
 
-    rule "StarterTier" {
+    rule "StarterTier" salience 90 {
         when
             Usage.apiCalls > 1000 && Usage.apiCalls <= 10000
         then
@@ -328,7 +328,7 @@ BEGIN
             Usage.baseCharge = 29;
     }
 
-    rule "ProTier" {
+    rule "ProTier" salience 80 {
         when
             Usage.apiCalls > 10000 && Usage.apiCalls <= 100000
         then
@@ -336,7 +336,7 @@ BEGIN
             Usage.baseCharge = 99;
     }
 
-    rule "EnterpriseTier" {
+    rule "EnterpriseTier" salience 70 {
         when
             Usage.apiCalls > 100000
         then
@@ -344,14 +344,14 @@ BEGIN
             Usage.baseCharge = 499;
     }
 
-    rule "StorageOverage" {
+    rule "StorageOverage" salience 60 {
         when
             Usage.storageGB > 50
         then
             Usage.overageCharge = Usage.overageCharge + ((Usage.storageGB - 50) * 0.10);
     }
 
-    rule "UserOverage" {
+    rule "UserOverage" salience 50 {
         when
             Usage.users > 10
         then
@@ -448,7 +448,7 @@ BEGIN
 
     -- Define approval rules
     approval_rules := $rules$
-    rule "AutoApproveSmallClaims" {
+    rule "AutoApproveSmallClaims" salience 100 {
         when
             Claim.amount <= 1000 && Claim.previousClaims <= 3
         then
@@ -456,7 +456,7 @@ BEGIN
             Claim.reason = "Auto-approved: Small claim amount";
     }
 
-    rule "ExceedsSingleLimit" {
+    rule "ExceedsSingleLimit" salience 90 {
         when
             Claim.amount > Policy.singleClaimLimit
         then
@@ -464,7 +464,7 @@ BEGIN
             Claim.reason = "Manual review: Exceeds single claim limit";
     }
 
-    rule "ExceedsAnnualLimit" {
+    rule "ExceedsAnnualLimit" salience 80 {
         when
             Claim.totalClaimedThisYear + Claim.amount > Policy.annualLimit
         then
@@ -472,7 +472,7 @@ BEGIN
             Claim.reason = "Manual review: Would exceed annual limit";
     }
 
-    rule "FrequentClaimsFraud" {
+    rule "FrequentClaimsFraud" salience 70 {
         when
             Claim.previousClaims > 5
         then
@@ -480,7 +480,7 @@ BEGIN
             Claim.reason = "Fraud alert: Too many claims this year";
     }
 
-    rule "StandardApproval" {
+    rule "StandardApproval" salience 60 {
         when
             Claim.amount > 1000 &&
             Claim.amount <= Policy.singleClaimLimit &&
@@ -572,56 +572,56 @@ BEGIN
 
     -- Define risk scoring rules
     risk_rules := $rules$
-    rule "AgeRisk" {
+    rule "AgeRisk" salience 100 {
         when
             Patient.age > 65
         then
             Patient.riskScore = Patient.riskScore + 15;
     }
 
-    rule "ObesityRisk" {
+    rule "ObesityRisk" salience 90 {
         when
             Patient.bmi > 30
         then
             Patient.riskScore = Patient.riskScore + 20;
     }
 
-    rule "HypertensionRisk" {
+    rule "HypertensionRisk" salience 80 {
         when
             Patient.bloodPressure == "high"
         then
             Patient.riskScore = Patient.riskScore + 25;
     }
 
-    rule "DiabetesRisk" {
+    rule "DiabetesRisk" salience 70 {
         when
             Patient.diabetes == true
         then
             Patient.riskScore = Patient.riskScore + 30;
     }
 
-    rule "SmokingRisk" {
+    rule "SmokingRisk" salience 60 {
         when
             Patient.smoking == true
         then
             Patient.riskScore = Patient.riskScore + 25;
     }
 
-    rule "LowRiskLevel" {
+    rule "LowRiskLevel" salience 50 {
         when
             Patient.riskScore < 30
         then
             Patient.riskLevel = "low";
     }
 
-    rule "ModerateRiskLevel" {
+    rule "ModerateRiskLevel" salience 40 {
         when
             Patient.riskScore >= 30 && Patient.riskScore < 60
         then
             Patient.riskLevel = "moderate";
     }
 
-    rule "HighRiskLevel" {
+    rule "HighRiskLevel" salience 30 {
         when
             Patient.riskScore >= 60
         then
@@ -797,7 +797,7 @@ CREATE TRIGGER validate_order
 ```sql
 UPDATE products
 SET data = run_rule_engine(data::TEXT, $rules$
-    rule "Discount" {
+    rule "Discount" salience 10 {
         when
             Product.stock > 100
         then
