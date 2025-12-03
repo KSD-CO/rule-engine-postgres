@@ -1,5 +1,4 @@
 use rust_rule_engine::{Facts, RustRuleEngine, GRLParser, Value};
-use std::collections::HashMap;
 
 /// Error codes for better error handling
 mod error_codes {
@@ -91,7 +90,8 @@ pub fn run_rule_engine(facts_json: &str, rules_grl: &str) -> String {
     let facts = Facts::new();
     if let serde_json::Value::Object(map) = json_val {
         for (key, value) in map {
-            if let Err(e) = facts.add_value(&key, json_to_engine_value(value)) {
+            // Use built-in From<serde_json::Value> for Value conversion
+            if let Err(e) = facts.add_value(&key, value.into()) {
                 return create_error_response(
                     error_codes::FACT_ADD_FAILED,
                     &format!("Failed to add fact '{}': {}", key, e)
@@ -156,31 +156,6 @@ pub fn run_rule_engine(facts_json: &str, rules_grl: &str) -> String {
             error_codes::EXECUTION_FAILED,
             &format!("Rule execution failed: {}", e)
         ),
-    }
-}
-
-fn json_to_engine_value(value: serde_json::Value) -> Value {
-    match value {
-        serde_json::Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                Value::Integer(i)
-            } else {
-                Value::Number(n.as_f64().unwrap_or(0.0))
-            }
-        }
-        serde_json::Value::String(s) => Value::String(s),
-        serde_json::Value::Bool(b) => Value::Boolean(b),
-        serde_json::Value::Object(obj) => {
-            let mut map = HashMap::new();
-            for (key, val) in obj {
-                map.insert(key, json_to_engine_value(val));
-            }
-            Value::Object(map)
-        }
-        serde_json::Value::Array(arr) => {
-            Value::Array(arr.into_iter().map(json_to_engine_value).collect())
-        }
-        _ => Value::Null,
     }
 }
 
