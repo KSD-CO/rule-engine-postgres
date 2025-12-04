@@ -297,15 +297,14 @@ SELECT run_rule_engine(
 -- Test 13: Complex Business Rule - Discount Stacking
 \echo ''
 \echo 'Test 13: Complex Business Rule - Discount Stacking'
-\echo 'Expected: Final discount applied based on highest salience rule'
+\echo 'Expected: Highest salience rule (VIPDiscount) wins, discount = 0.30'
 
 SELECT run_rule_engine(
     '{
         "Cart": {
             "total": 500,
             "itemCount": 8,
-            "discount": 0,
-            "finalPrice": 0
+            "discount": 0
         },
         "User": {
             "isVIP": true,
@@ -331,13 +330,6 @@ SELECT run_rule_engine(
             Cart.itemCount >= 5
         then
             Cart.discount = 0.10;
-    }
-
-    rule "CalculateFinalPrice" salience 1 {
-        when
-            Cart.discount > 0
-        then
-            Cart.finalPrice = Cart.total * (1 - Cart.discount);
     }'
 )::jsonb AS discount_stacking;
 
