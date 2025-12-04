@@ -1,3 +1,15 @@
+-- Health check and version functions
+CREATE OR REPLACE FUNCTION rule_engine_health_check()
+RETURNS TEXT
+AS 'MODULE_PATHNAME', 'rule_engine_health_check_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION rule_engine_version()
+RETURNS TEXT
+AS 'MODULE_PATHNAME', 'rule_engine_version_wrapper'
+LANGUAGE C STRICT;
+
+-- Forward chaining API
 CREATE OR REPLACE FUNCTION run_rule_engine(facts_json TEXT, rules_grl TEXT)
 RETURNS TEXT
 AS 'MODULE_PATHNAME', 'run_rule_engine_wrapper'
