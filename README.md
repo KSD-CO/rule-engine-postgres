@@ -1,17 +1,17 @@
 # rule-engine-postgres
 
 [![CI](https://github.com/KSD-CO/rule-engine-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/KSD-CO/rule-engine-postgres/actions)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Production-ready** PostgreSQL extension written in Rust that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) syntax with both **forward** and **backward chaining** support.
+**Production-ready** PostgreSQL extension written in Rust that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) syntax with **forward chaining**, **backward chaining**, and **rule versioning** support.
 
 ## Why Use This?
 
 - **No Microservices Overhead**: Business rules run directly in PostgreSQL
 - **Real-time Decisions**: Sub-millisecond rule execution (~1000 rules/sec)
 - **Dual Reasoning Modes**: Forward chaining (data-driven) + Backward chaining (goal-driven)
-- **Version Control Rules**: Store rules in database with full audit trail
+- **Rule Repository**: Store, version, and manage rules with full audit trail ⭐ NEW
 - **Dynamic Logic**: Change business rules without code deployment
 - **Transaction Safety**: Rules execute within PostgreSQL transactions
 
@@ -20,6 +20,7 @@
 - ⚡ **High Performance**: Compiled Rust code, optimized for speed
 - 🎯 **Backward Chaining**: Goal queries with proof traces ("Can we prove X?")
 - 🔀 **Forward Chaining**: Event-driven rule execution (traditional)
+- 📦 **Rule Repository**: Version control, tagging, and activation management ⭐ NEW
 - 🔒 **Production Ready**: Error codes, health checks, Docker support, CI/CD
 - 📦 **Easy Deploy**: One-liner install or pre-built packages
 - 🔧 **Flexible**: JSON/JSONB support, triggers, nested objects
@@ -81,16 +82,40 @@ cd rule-engine-postgres
 
 ### Forward Chaining (Data-Driven)
 
-Execute rules that modify facts based on conditions:
+Execute rules that modify facts based on conditions.
+
+**Option 1: Using Stored Rules (v1.1.0+)** ⭐ RECOMMENDED
+
+```sql
+-- Save rule once
+SELECT rule_save(
+    'check_age_rule',
+    'rule "CheckAge" salience 10 {
+        when User.age > 18
+        then User.status = "adult";
+    }',
+    '1.0.0',
+    'Age verification rule',
+    'Initial version'
+);
+
+-- Execute many times (clean, no GRL text)
+SELECT rule_execute_by_name(
+    'check_age_rule',
+    '{"User": {"age": 30, "status": "active"}}',
+    NULL
+);
+-- Returns: {"User": {"age": 30, "status": "adult"}}
+```
+
+**Option 2: Inline Rules (Legacy)**
 
 ```sql
 SELECT run_rule_engine(
     '{"User": {"age": 30, "status": "active"}}',
     'rule "CheckAge" salience 10 {
-        when
-            User.age > 18
-        then
-            User.status = "adult";
+        when User.age > 18
+        then User.status = "adult";
     }'
 );
 -- Returns: {"User": {"age": 30, "status": "adult"}}
@@ -98,7 +123,43 @@ SELECT run_rule_engine(
 
 ### Backward Chaining (Goal-Driven) ⭐ NEW
 
-Query if a goal can be proven with full reasoning trace:
+Query if a goal can be proven with full reasoning trace.
+
+**Option 1: Using Stored Rules (v1.1.0+)** ⭐ RECOMMENDED
+
+```sql
+-- Save rule once
+SELECT rule_save(
+    'age_check_rules',
+    'rule "AgeCheck" {
+        when User.Age >= 18
+        then User.IsAdult = true;
+    }',
+    '1.0.0',
+    'Age verification rules',
+    'Initial version'
+);
+
+-- Query goal with proof trace
+SELECT rule_query_by_name(
+    'age_check_rules',
+    '{"User": {"Age": 25}}',
+    'User.IsAdult == true',
+    NULL
+)::jsonb;
+-- Returns: {"provable": true, "proof_trace": "AgeCheck", ...}
+
+-- Fast boolean check (production)
+SELECT rule_can_prove_by_name(
+    'age_check_rules',
+    '{"User": {"Age": 25}}',
+    'User.IsAdult == true',
+    NULL
+);
+-- Returns: true
+```
+
+**Option 2: Inline Rules (Legacy)**
 
 ```sql
 -- Simple goal query
@@ -145,6 +206,124 @@ SELECT query_backward_chaining_multi(
 
 ---
 
+## Rule Repository & Versioning ⭐ NEW
+
+Store and manage rules with semantic versioning, tags, and activation control.
+
+### Save Rules with Versioning
+
+```sql
+-- Save a new rule (auto-versioned as 1.0.0)
+SELECT rule_save(
+    'discount_rules',                                    -- Rule name
+    'rule HighValue "20% discount" {                     -- GRL content
+        when Customer.orderTotal > 1000
+        then Customer.discount = 0.20;
+    }',
+    NULL,                                                -- Auto version
+    'Discount rules for high-value customers',          -- Description
+    'Initial version'                                    -- Change notes
+);
+-- Returns: 1 (rule_id)
+
+-- Save version 2.0.0 with updated logic
+SELECT rule_save(
+    'discount_rules',
+    'rule HighValue "25% discount for premium" {
+        when Customer.orderTotal > 2000
+        then Customer.discount = 0.25;
+    }',
+    '2.0.0',                                             -- Explicit version
+    'Increased discount threshold',
+    'Raised to 2000 and 25% discount'
+);
+```
+
+### Retrieve and Execute Rules
+
+```sql
+-- Get rule by name (uses default version)
+SELECT rule_get('discount_rules', NULL);
+
+-- Get specific version
+SELECT rule_get('discount_rules', '1.0.0');
+
+-- Execute stored rule by name (forward chaining)
+SELECT rule_execute_by_name(
+    'discount_rules',
+    '{"Customer": {"orderTotal": 2500}}',
+    NULL  -- Uses default version
+);
+-- Returns: {"Customer": {"discount": 0.25, "orderTotal": 2500}}
+
+-- Query goal with backward chaining
+SELECT rule_query_by_name(
+    'eligibility_rules',
+    '{"User": {"Age": 25}}',
+    'User.CanVote == true',
+    NULL
+)::jsonb;
+-- Returns: {"provable": true, "proof_trace": "VoteAge", ...}
+
+-- Fast boolean check
+SELECT rule_can_prove_by_name(
+    'eligibility_rules',
+    '{"User": {"Age": 25}}',
+    'User.CanRetire == true',
+    NULL
+);
+-- Returns: false
+```
+
+### Version Management
+
+```sql
+-- Activate a different version as default
+SELECT rule_activate('discount_rules', '2.0.0');
+
+-- Add tags for organization
+SELECT rule_tag_add('discount_rules', 'production');
+SELECT rule_tag_add('discount_rules', 'billing');
+
+-- Remove tag
+SELECT rule_tag_remove('discount_rules', 'billing');
+
+-- Delete old version (cannot delete default)
+SELECT rule_delete('discount_rules', '1.0.0');
+
+-- View all versions
+SELECT * FROM rule_versions WHERE rule_id = 
+    (SELECT id FROM rule_definitions WHERE name = 'discount_rules');
+
+-- View tags
+SELECT * FROM rule_tags WHERE rule_id = 
+    (SELECT id FROM rule_definitions WHERE name = 'discount_rules');
+```
+
+### Database Schema
+
+The Rule Repository uses 4 tables:
+
+- **`rule_definitions`**: Master rule records with metadata
+- **`rule_versions`**: Version history with GRL content (semantic versioning)
+- **`rule_tags`**: Tags for categorization and filtering
+- **`rule_audit_log`**: Automatic audit trail of all changes
+
+**Features:**
+- ✅ Semantic versioning (MAJOR.MINOR.PATCH)
+- ✅ Single default version enforcement (via trigger)
+- ✅ Automatic audit logging
+- ✅ Tag-based organization
+- ✅ Protection against deleting default versions
+- ✅ Created/updated timestamps and user tracking
+
+```sql
+-- Run migration to create schema
+\i migrations/001_rule_repository.sql
+```
+
+---
+
 ## Real-World Examples
 
 ### Quick Examples
@@ -167,7 +346,7 @@ SELECT query_backward_chaining_multi(
 - **`run_rule_engine(facts_json TEXT, rules_grl TEXT) → TEXT`**
   Execute GRL rules on JSON facts. Max 1MB for both parameters.
 
-### Backward Chaining Functions ⭐ NEW
+### Backward Chaining Functions
 
 - **`query_backward_chaining(facts_json TEXT, rules_grl TEXT, goal TEXT) → JSON`**
   Query if a goal can be proven with full details and proof trace.
@@ -178,13 +357,42 @@ SELECT query_backward_chaining_multi(
 - **`can_prove_goal(facts_json TEXT, rules_grl TEXT, goal TEXT) → BOOLEAN`**
   Fast boolean check (2-3x faster, no proof trace).
 
+### Rule Repository Functions ⭐ NEW
+
+- **`rule_save(name TEXT, grl_content TEXT, version TEXT, description TEXT, change_notes TEXT) → INT`**
+  Save rule with versioning. Pass NULL for version to auto-increment. Returns rule_id.
+
+- **`rule_get(name TEXT, version TEXT) → TEXT`**
+  Get GRL content. Pass NULL for version to get default version.
+
+- **`rule_activate(name TEXT, version TEXT) → BOOLEAN`**
+  Set a version as the default. Returns true on success.
+
+- **`rule_delete(name TEXT, version TEXT) → BOOLEAN`**
+  Delete a version (cannot delete default). Pass NULL to delete entire rule.
+
+- **`rule_tag_add(name TEXT, tag TEXT) → BOOLEAN`**
+  Add a tag to a rule for organization.
+
+- **`rule_tag_remove(name TEXT, tag TEXT) → BOOLEAN`**
+  Remove a tag from a rule.
+
+- **`rule_execute_by_name(name TEXT, facts_json TEXT, version TEXT) → TEXT`**
+  Execute a stored rule by name (forward chaining). Pass NULL for version to use default.
+
+- **`rule_query_by_name(name TEXT, facts_json TEXT, goal TEXT, version TEXT) → JSON`**
+  Query goal using stored rule (backward chaining with proof trace). Pass NULL for version to use default.
+
+- **`rule_can_prove_by_name(name TEXT, facts_json TEXT, goal TEXT, version TEXT) → BOOLEAN`**
+  Fast boolean check if goal is provable using stored rule. Pass NULL for version to use default.
+
 ### Utility Functions
 
 - **`rule_engine_health_check() → TEXT`**
   Returns health status with version and timestamp.
 
 - **`rule_engine_version() → TEXT`**
-  Returns extension version ("1.0.0").
+  Returns extension version ("1.1.0").
 
 ### Error Codes
 
@@ -255,6 +463,33 @@ CREATE TRIGGER validate_order
 
 ### Store Rules in Database
 
+Using the built-in Rule Repository (v1.1.0+):
+
+```sql
+-- Save rules with versioning
+SELECT rule_save(
+    'order_validation_rules',
+    'rule "MinAmount" { when Order.amount < 10 then Order.valid = false; }
+     rule "MaxAmount" { when Order.amount > 10000 then Order.needsApproval = true; }',
+    '1.0.0',
+    'Order validation rules',
+    'Initial version'
+);
+
+-- Tag for organization
+SELECT rule_tag_add('order_validation_rules', 'validation');
+SELECT rule_tag_add('order_validation_rules', 'production');
+
+-- Execute by name
+SELECT rule_execute_by_name(
+    'order_validation_rules',
+    order_data::TEXT,
+    NULL  -- Uses default version
+) FROM orders WHERE status = 'pending';
+```
+
+Legacy approach (storing in your own table):
+
 ```sql
 CREATE TABLE business_rules (
     rule_id SERIAL PRIMARY KEY,
@@ -281,6 +516,7 @@ SELECT run_rule_engine(
 
 - **[📖 Documentation Index](docs/README.md)** - Complete documentation navigation
 - **[🎯 Backward Chaining Guide](docs/guides/backward-chaining.md)** - Goal-driven reasoning guide
+- **[📦 Rule Repository RFC](docs/rfcs/0001-rule-repository.md)** - Technical design for versioning ⭐ NEW
 - **[💡 Use Case Examples](docs/examples/use-cases.md)** - Real-world production examples
 - **[🔧 API Reference](docs/api-reference.md)** - Complete function reference
 - **[🔗 Integration Patterns](docs/integration-patterns.md)** - Triggers, JSONB, performance tips
@@ -341,25 +577,35 @@ This extension is built with a clean, modular architecture:
 
 ```
 src/
-├── lib.rs (15 lines)              # Minimal entry point
+├── lib.rs                         # Entry point
 ├── api/
 │   ├── health.rs                  # Health check & version
 │   ├── engine.rs                  # Forward chaining API
-│   └── backward.rs (134 lines)    # ⭐ Backward chaining API
+│   └── backward.rs                # Backward chaining API
 ├── core/
 │   ├── facts.rs                   # Facts/JSON conversion
 │   ├── rules.rs                   # GRL parsing
 │   ├── executor.rs                # Forward chaining logic
-│   └── backward.rs (152 lines)    # ⭐ Backward chaining logic
+│   └── backward.rs                # Backward chaining logic
+├── repository/                    # ⭐ NEW - Rule Repository
+│   ├── queries.rs (375 lines)     # CRUD operations
+│   ├── models.rs                  # Data structures
+│   ├── validation.rs              # Input validation
+│   └── version.rs                 # Semantic versioning
 ├── error/
-│   ├── codes.rs                   # Error definitions (12 codes)
+│   ├── codes.rs                   # Error definitions
 │   └── mod.rs                     # Error utilities
 └── validation/
     ├── input.rs                   # Input validation
     └── limits.rs                  # Size constraints
 ```
 
-**Total**: 15 modules, ~400 lines of clean, maintainable code
+**Key Features:**
+- 7 Rule Repository functions (save, get, activate, delete, tag operations, execute)
+- Semantic version parsing and comparison
+- Database schema with 4 tables + triggers + views
+- Automatic audit logging
+- Production-ready error handling
 
 ---
 
@@ -371,4 +617,31 @@ src/
 
 ---
 
-**Version**: 1.0.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
+**Version**: 1.1.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
+
+---
+
+## What's New in v1.1.0 ⭐
+
+### Rule Repository & Versioning System
+
+Complete rule lifecycle management directly in PostgreSQL:
+
+- **📦 Semantic Versioning**: MAJOR.MINOR.PATCH with automatic incrementing
+- **🏷️ Tagging System**: Organize rules with custom tags
+- **🔄 Version Control**: Store multiple versions, activate any as default
+- **📝 Audit Trail**: Automatic logging of all changes
+- **🛡️ Safe Operations**: Protection against deleting active versions
+- **🚀 Execute by Name**: Run rules without passing GRL content
+
+```sql
+-- Complete workflow example
+SELECT rule_save('pricing', 'rule "Discount" { ... }', '1.0.0', 'Initial', 'First');
+SELECT rule_tag_add('pricing', 'production');
+SELECT rule_execute_by_name('pricing', '{"Order": {"total": 100}}', NULL);
+SELECT rule_activate('pricing', '2.0.0');  -- Switch versions
+```
+
+**Migration**: Run `migrations/001_rule_repository.sql` to enable.
+
+---

@@ -1,6 +1,51 @@
 pub mod codes;
 
 use codes::ErrorCode;
+use std::fmt;
+
+/// Rule Engine Error Types
+#[derive(Debug)]
+pub enum RuleEngineError {
+    /// Rule not found
+    RuleNotFound(String),
+    /// Invalid input
+    InvalidInput(String),
+    /// Database error
+    DatabaseError(String),
+    /// Execution error from rust-rule-engine
+    ExecutionError(rust_rule_engine::RuleEngineError),
+}
+
+impl fmt::Display for RuleEngineError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RuleEngineError::RuleNotFound(msg) => write!(f, "Rule not found: {}", msg),
+            RuleEngineError::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
+            RuleEngineError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
+            RuleEngineError::ExecutionError(e) => write!(f, "Execution error: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for RuleEngineError {}
+
+impl From<rust_rule_engine::RuleEngineError> for RuleEngineError {
+    fn from(err: rust_rule_engine::RuleEngineError) -> Self {
+        RuleEngineError::ExecutionError(err)
+    }
+}
+
+impl From<serde_json::Error> for RuleEngineError {
+    fn from(err: serde_json::Error) -> Self {
+        RuleEngineError::InvalidInput(format!("JSON error: {}", err))
+    }
+}
+
+impl From<pgrx::spi::SpiError> for RuleEngineError {
+    fn from(err: pgrx::spi::SpiError) -> Self {
+        RuleEngineError::DatabaseError(format!("Database error: {:?}", err))
+    }
+}
 
 /// Create a JSON error response with code, message, and timestamp
 #[allow(dead_code)]

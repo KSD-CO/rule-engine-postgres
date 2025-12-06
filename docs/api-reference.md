@@ -6,6 +6,7 @@ Complete reference for all PostgreSQL Rule Engine functions.
 
 - [Forward Chaining](#forward-chaining-functions)
 - [Backward Chaining](#backward-chaining-functions)
+- [Rule Repository](#rule-repository-functions)
 - [Utility Functions](#utility-functions)
 - [Error Codes](#error-codes)
 - [GRL Syntax](#grl-syntax-reference)
@@ -117,6 +118,259 @@ SELECT query_backward_chaining_multi(
     'rule "Vote" { when User.Age >= 18 then User.CanVote = true; }
      rule "Retire" { when User.Age >= 65 then User.CanRetire = true; }',
     ARRAY['User.CanVote == true', 'User.CanRetire == true']
+)::jsonb[];
+```
+
+---
+
+## Rule Repository Functions
+
+### `rule_save(name TEXT, grl_content TEXT, version TEXT DEFAULT NULL, description TEXT DEFAULT NULL, change_notes TEXT DEFAULT NULL) → INTEGER`
+
+Save a rule to the repository with versioning support.
+
+**Parameters:**
+- `name` (TEXT): Unique rule name (alphanumeric, underscore, hyphen; must start with letter)
+- `grl_content` (TEXT): GRL rule definition
+- `version` (TEXT, optional): Semantic version (e.g., 1.0.0, 2.1.0-beta). Auto-increments if NULL
+- `description` (TEXT, optional): Human-readable description of the rule
+- `change_notes` (TEXT, optional): Notes about what changed in this version
+
+**Returns:** Rule ID (INTEGER)
+
+**Size Limits:**
+- Rule name: max 255 characters
+- GRL content: max 1MB
+
+**Example:**
+```sql
+-- Create new rule
+SELECT rule_save(
+    'discount_calculator',
+    'rule "Discount" salience 10 {
+        when Order.Amount > 100
+        then Order.Discount = 15;
+    }',
+    '1.0.0',
+    'Calculate discount for orders over $100'
+);
+-- Returns: 1
+
+-- Update rule with new version (auto-increment)
+SELECT rule_save(
+    'discount_calculator',
+    'rule "Discount" salience 10 {
+        when Order.Amount > 100
+        then Order.Discount = 20;
+    }',
+    NULL,  -- Will auto-increment to 1.0.1
+    NULL,
+    'Increased discount from 15% to 20%'
+);
+-- Returns: 1 (same rule, new version)
+```
+
+**Errors:**
+- `RE-001`: Invalid rule name format
+- `RE-002`: GRL content validation failed
+- `RE-003`: Invalid semantic version format
+
+---
+
+### `rule_get(name TEXT, version TEXT DEFAULT NULL) → TEXT`
+
+Retrieve GRL content for a rule.
+
+**Parameters:**
+- `name` (TEXT): Rule name
+- `version` (TEXT, optional): Specific version. Uses default version if NULL
+
+**Returns:** GRL content (TEXT)
+
+**Example:**
+```sql
+-- Get default version
+SELECT rule_get('discount_calculator');
+
+-- Get specific version
+SELECT rule_get('discount_calculator', '1.0.0');
+```
+
+**Errors:**
+- `RE-101`: Rule not found
+- `RE-102`: Version not found
+- `RE-103`: Rule is inactive
+
+---
+
+### `rule_execute_by_name(name TEXT, facts_json TEXT, version TEXT DEFAULT NULL) → TEXT`
+
+Execute a stored rule by name (convenience function combining rule_get and run_rule_engine).
+
+**Parameters:**
+- `name` (TEXT): Rule name
+- `facts_json` (TEXT): Input facts as JSON string
+- `version` (TEXT, optional): Specific version. Uses default version if NULL
+
+**Returns:** Modified facts (JSON TEXT)
+
+**Example:**
+```sql
+-- Execute rule using default version
+SELECT rule_execute_by_name(
+    'discount_calculator',
+    '{"Order": {"Amount": 150}}'
+);
+-- Returns: {"Order": {"Amount": 150, "Discount": 15}}
+
+-- Execute specific version
+SELECT rule_execute_by_name(
+    'discount_calculator',
+    '{"Order": {"Amount": 150}}',
+    '1.0.0'
+);
+```
+
+**Use Cases:**
+- Production rule execution (no need to pass GRL text)
+- A/B testing different rule versions
+- Clean application code (reference rules by name)
+
+---
+
+### `rule_activate(name TEXT, version TEXT) → BOOLEAN`
+
+Activate a specific version as the default.
+
+**Parameters:**
+- `name` (TEXT): Rule name
+- `version` (TEXT): Version to activate
+
+**Returns:** Success (BOOLEAN)
+
+**Example:**
+```sql
+-- Activate version 1.0.0 as default (rollback scenario)
+SELECT rule_activate('discount_calculator', '1.0.0');
+```
+
+**Use Cases:**
+- Rollback to previous version after bug discovery
+- Switch between A/B test variants
+- Promote beta version to production
+
+---
+
+### `rule_delete(name TEXT, version TEXT DEFAULT NULL) → BOOLEAN`
+
+Delete a rule or specific version.
+
+**Parameters:**
+- `name` (TEXT): Rule name
+- `version` (TEXT, optional): Specific version. Deletes all versions if NULL
+
+**Returns:** Success (BOOLEAN)
+
+**Example:**
+```sql
+-- Delete specific version
+SELECT rule_delete('discount_calculator', '1.0.0');
+
+-- Delete entire rule (all versions)
+SELECT rule_delete('discount_calculator');
+```
+
+**Errors:**
+- `RE-201`: Rule not found
+- `RE-202`: Cannot delete default version (activate another first)
+
+---
+
+### `rule_tag_add(name TEXT, tag TEXT) → BOOLEAN`
+
+Add a tag to a rule for categorization.
+
+**Parameters:**
+- `name` (TEXT): Rule name
+- `tag` (TEXT): Tag name (lowercase, alphanumeric, underscore, hyphen)
+
+**Returns:** Success (BOOLEAN)
+
+**Example:**
+```sql
+SELECT rule_tag_add('discount_calculator', 'discount');
+SELECT rule_tag_add('discount_calculator', 'pricing');
+SELECT rule_tag_add('discount_calculator', 'ecommerce');
+```
+
+---
+
+### `rule_tag_remove(name TEXT, tag TEXT) → BOOLEAN`
+
+Remove a tag from a rule.
+
+**Parameters:**
+- `name` (TEXT): Rule name
+- `tag` (TEXT): Tag name
+
+**Returns:** Success (BOOLEAN)
+
+**Example:**
+```sql
+SELECT rule_tag_remove('discount_calculator', 'pricing');
+```
+
+---
+
+## Database Views
+
+### `rule_catalog`
+
+Complete catalog of all rules with their default version and tags.
+
+**Columns:**
+- `id`: Rule ID
+- `name`: Rule name
+- `description`: Rule description
+- `is_active`: Whether rule is active
+- `default_version`: Current default version
+- `grl_content`: GRL content of default version
+- `version_created_at`: When default version was created
+- `rule_created_at`: When rule was first created
+- `updated_at`: Last update timestamp
+- `tags`: Array of tags
+
+**Example:**
+```sql
+-- List all active rules
+SELECT name, description, default_version, tags
+FROM rule_catalog
+WHERE is_active = true
+ORDER BY name;
+
+-- Find rules by tag
+SELECT name, default_version
+FROM rule_catalog
+WHERE 'discount' = ANY(tags);
+```
+
+---
+
+## Database Tables
+
+### Core Tables
+
+- **`rule_definitions`**: Main rule metadata (name, description, active status)
+- **`rule_versions`**: Version history for each rule (GRL content, version number)
+- **`rule_tags`**: Tags for categorizing rules
+- **`rule_audit_log`**: Complete audit trail of all rule changes
+
+### Utility Functions
+
+- **`is_valid_semver(version TEXT) → BOOLEAN`**: Check if version string is valid semantic version
+- **`compare_semver(v1 TEXT, v2 TEXT) → INTEGER`**: Compare two semantic versions (-1, 0, 1)
+
+---
 )::jsonb;
 
 -- Returns array:

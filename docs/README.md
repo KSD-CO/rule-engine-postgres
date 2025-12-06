@@ -17,6 +17,14 @@ Welcome to the PostgreSQL Rule Engine documentation! This directory contains com
 - **[Backward Chaining Guide](guides/backward-chaining.md)**
   Complete guide to goal-driven reasoning with backward chaining
 
+- **[Rule Repository Quick Reference](guides/rule-repository-quick-reference.md)** ⭐ NEW
+  Quick reference for versioning, tagging, and rule management
+
+### Features (v1.1.0+)
+
+- **[Rule Repository RFC](rfcs/0001-rule-repository.md)** ⭐ NEW
+  Technical design and architecture for rule versioning system
+
 ### Deployment
 
 - **[Docker Deployment](deployment/docker.md)**

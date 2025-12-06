@@ -1,5 +1,5 @@
-comment = 'Production-ready PostgreSQL extension for running Rust rule engine on facts and GRL rules'
-default_version = '1.0.0'
+comment = 'Production-ready PostgreSQL extension for running Rust rule engine on facts and GRL rules with Rule Repository support'
+default_version = '1.1.0'
 module_pathname = '$libdir/rule_engine_postgre_extensions'
 relocatable = false
 requires = ''

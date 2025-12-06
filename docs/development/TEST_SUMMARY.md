@@ -2,7 +2,8 @@
 
 ## 📊 Overview
 
-Created comprehensive test suite with **38 tests** covering all major use cases, edge cases, and reasoning strategies (forward + backward chaining).
+**Current Version**: v1.1.0  
+**Test Coverage**: Comprehensive suite covering forward chaining, backward chaining, Rule Repository, and edge cases.
 
 ### Test Distribution
 - **18 Rust Integration Tests** (`tests/integration_tests.rs`)
@@ -11,13 +12,71 @@ Created comprehensive test suite with **38 tests** covering all major use cases,
 - **20 SQL Tests**
   - 14 in `tests/test_case_studies.sql`
   - 6 in `tests/test_backward_chaining.sql`
+- **Rule Repository Tests** (Production validated ✅)
+  - 7 functions tested in live PostgreSQL 17
+  - All CRUD operations verified
+  - Version management tested
+  - Tag operations validated
+  - Forward + backward chaining with stored rules
 - **14 Test Fixture Files** (JSON + GRL pairs)
   - 8 forward chaining fixtures
   - 6 backward chaining fixtures
 
 ## 🎯 Test Coverage
 
-### 1. Real-World Case Studies (5 tests)
+### 1. Rule Repository Functions (v1.1.0) ✅
+
+All 7 Rule Repository functions tested in production:
+
+#### ✅ CRUD Operations
+- **rule_save()**: Create/update rules with versioning
+  - Tested: Initial save, version updates, conflict handling
+  - Validated: Auto-increment versions, metadata storage
+  
+- **rule_get()**: Retrieve rule by name/version
+  - Tested: Get active version, specific version, non-existent rules
+  - Validated: JSON response format, metadata fields
+  
+- **rule_activate()**: Change active version
+  - Tested: Activate different versions, rollback scenarios
+  - Validated: Atomic updates, audit trail
+  
+- **rule_delete()**: Soft delete rules
+  - Tested: Delete by name, preserve history
+  - Validated: Cascade to tags, audit log entries
+
+#### ✅ Tag Operations
+- **rule_tag_add()**: Add tags to rules
+  - Tested: Single tags, multiple tags, duplicate handling
+  - Validated: Tag association, metadata updates
+  
+- **rule_tag_remove()**: Remove tags from rules
+  - Tested: Remove single/multiple tags, non-existent tags
+  - Validated: Clean deletion, no orphans
+
+#### ✅ Execution with Stored Rules
+- **rule_execute_by_name()**: Forward chaining with stored rules
+  - Tested: Execute active version, version-specific execution
+  - Validated: Same output as inline rules, performance
+  - Example: Discount rules, eligibility checks
+  
+- **rule_query_by_name()**: Backward chaining with proof trace
+  - Tested: Goal proving with stored rules
+  - Validated: Proof traces, goal exploration stats
+  - Example: `rule_query_by_name('eligibility_rules', ..., 'User.CanVote == true', NULL)`
+  
+- **rule_can_prove_by_name()**: Fast boolean check
+  - Tested: Quick goal verification
+  - Validated: Performance, true/false responses
+  - Example: `rule_can_prove_by_name('eligibility_rules', ..., 'User.CanRetire == true', NULL)`
+
+#### ✅ Database Schema
+- **Tables**: rule_definitions, rule_versions, rule_tags, rule_audit_log
+- **Views**: rule_catalog (active rules)
+- **Triggers**: Audit logging (auto-capture changes)
+- **Constraints**: Unique names, version ordering, referential integrity
+
+### 2. Real-World Case Studies (5 tests)
 Based on README.md examples:
 
 #### ✅ E-Commerce Dynamic Pricing
@@ -48,7 +107,7 @@ Based on README.md examples:
 - Covered in integration tests
 - Policy limits, fraud detection, claim history
 
-### 2. Error Handling (7 tests)
+### 3. Error Handling (7 tests)
 
 | Error Code | Test | Description |
 |------------|------|-------------|
@@ -63,7 +122,7 @@ Based on README.md examples:
 **Coverage**: 4/7 error codes tested (57%)
 **Action**: Add remaining 3 error tests
 
-### 3. Backward Chaining Tests (4 Rust + 6 SQL tests)
+### 4. Backward Chaining Tests (4 Rust + 6 SQL + Production validated)
 
 #### ✅ Medical Diagnosis
 - Symptoms → Infer condition → Make diagnosis
@@ -85,7 +144,15 @@ Based on README.md examples:
 - Verify all prerequisites
 - Expected: canDrive = true after checks pass
 
-### 4. Feature Tests (6 tests)
+#### ✅ Production Validation (v1.1.0)
+Real-world testing with Rule Repository:
+- Saved eligibility rules to database
+- Tested `rule_query_by_name()` with "User.CanVote == true" goal
+- Result: `{"provable": true, "proof_trace": "CanVote", ...}`
+- Tested `rule_can_prove_by_name()` with "User.CanRetire == true" goal
+- Result: `false` (correct for Age=25)
+
+### 5. Feature Tests (6 tests)
 
 #### ✅ Nested Objects
 - Deep object traversal (3+ levels)
