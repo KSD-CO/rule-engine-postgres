@@ -533,6 +533,7 @@ Technical documentation in this repo:
 - **[🔗 Integration Patterns](docs/integration-patterns.md)** - Triggers, JSONB, performance tips
 - **[🐳 Docker Deployment](docs/deployment/docker.md)** - Docker and Docker Compose
 - **[🔨 Build from Source](docs/deployment/build-from-source.md)** - Manual build instructions
+- **[🐛 Troubleshooting](docs/development/TROUBLESHOOTING.md)** - Common build issues and fixes
 - **[📦 Distribution Guide](docs/deployment/distribution.md)** - Package distribution
 
 ---
@@ -567,6 +568,17 @@ Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - Cloud deployment guides (AWS RDS, Google Cloud SQL, Azure)
 
 ### For Maintainers
+
+**Pre-commit Checks:**
+```bash
+# Manual checks before committing
+./check-before-commit.sh      # Full check (both PG 16 & 17)
+./quick-check.sh               # Quick check (PG 17 only, uses cache)
+
+# Quick fixes
+cargo fmt --all                                                         # Auto-fix formatting
+cargo clippy --no-default-features --features pg17 --fix -- -D warnings # Auto-fix some warnings
+```
 
 **Version Management:**
 ```bash

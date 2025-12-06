@@ -29,6 +29,13 @@ if [ ! -f "$PG_CONFIG" ]; then
     echo "Please install postgresql-server-dev-${PG_VERSION}"
     exit 1
 fi
+
+# Build pgrx_embed first to avoid "Failed to find pgrx_embed binary" error
+echo "Building pgrx_embed..."
+cargo build --release --bin pgrx_embed --no-default-features --features pg${PG_VERSION}
+
+# Now run package (which needs pgrx_embed)
+echo "Running cargo pgrx package..."
 cargo pgrx package --pg-config "$PG_CONFIG"
 
 # Create package structure

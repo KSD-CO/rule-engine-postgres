@@ -47,6 +47,10 @@ jobs:
         run: |
           cargo install cargo-pgrx --version 0.16.1 --locked
       
+      - name: Initialize pgrx
+        run: |
+          cargo pgrx init --pg${{ matrix.pg_version }} /usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config
+      
       - name: Build .deb package
         run: |
           chmod +x build-deb.sh

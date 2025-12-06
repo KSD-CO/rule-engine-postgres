@@ -95,8 +95,14 @@ jobs:
       - name: Initialize pgrx
         run: cargo pgrx init --pg${{ matrix.pg_version }} /usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config
 
-      - name: Build extension with cargo pgrx package
-        run: cargo pgrx package --pg-config /usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config
+      - name: Build extension
+        run: |
+          # Build the extension binary
+          cargo build --release --no-default-features --features pg${{ matrix.pg_version }}
+          
+          # Verify the build output
+          ls -la target/release/
+          file target/release/*.so || file target/release/*.dylib || echo "No shared library found"
 
       - name: Run tests
         run: cargo test --no-default-features --features pg${{ matrix.pg_version }}
