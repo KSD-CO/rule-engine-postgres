@@ -23,8 +23,14 @@ PG_VERSION=$(psql --version 2>/dev/null | grep -oP '\d+' | head -1 || echo "16")
 echo "Detected: $OS $VERSION with PostgreSQL $PG_VERSION"
 echo ""
 
+# Get latest release version from GitHub API
+LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/KSD-CO/rule-engine-postgres/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/' || echo "1.1.0")
+
+echo "Latest version: v${LATEST_VERSION}"
+echo ""
+
 # Check if pre-built binary exists
-BINARY_URL="https://github.com/KSD-CO/rule-engine-postgres/releases/download/v1.0.0/postgresql-${PG_VERSION}-rule-engine_1.0.0_amd64.deb"
+BINARY_URL="https://github.com/KSD-CO/rule-engine-postgres/releases/download/v${LATEST_VERSION}/postgresql-${PG_VERSION}-rule-engine_${LATEST_VERSION}_amd64.deb"
 
 if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
     echo "📦 Downloading pre-built package..."
@@ -56,11 +62,13 @@ if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
         # Clone and build
         git clone https://github.com/KSD-CO/rule-engine-postgres.git /tmp/rule-engine
         cd /tmp/rule-engine
-        cargo build --release --features pg$PG_VERSION
+        
+        # Build with cargo pgrx package
+        cargo pgrx package --pg-config /usr/lib/postgresql/$PG_VERSION/bin/pg_config
 
         # Install
-        sudo cp target/release/librule_engine_postgre_extensions.so \
-            /usr/lib/postgresql/$PG_VERSION/lib/rule_engine_postgre_extensions.so
+        sudo cp target/release/rule_engine_postgre_extensions-pg$PG_VERSION/usr/lib/postgresql/$PG_VERSION/lib/rule_engine_postgre_extensions.so \
+            /usr/lib/postgresql/$PG_VERSION/lib/
         sudo cp rule_engine_postgre_extensions.control \
             /usr/share/postgresql/$PG_VERSION/extension/
         sudo cp rule_engine_postgre_extensions--*.sql \

@@ -3,8 +3,12 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.1.0)'
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,92 +16,118 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  create-release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-  build-artifacts:
-    name: Build Artifacts
-    needs: create-release
-    runs-on: ubuntu-latest
+  build-packages:
+    name: Build Release Packages
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        pg_version: [13, 14, 15, 16, 17]
-
+        pg_version: [16, 17]
+    
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install PostgreSQL
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install PostgreSQL ${{ matrix.pg_version }}
         run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
-          sudo apt-get install -y postgresql-${{ matrix.pg_version }} postgresql-server-dev-${{ matrix.pg_version }}
-
+          sudo apt-get install -y \
+            postgresql-${{ matrix.pg_version }} \
+            postgresql-server-dev-${{ matrix.pg_version }} \
+            build-essential \
+            pkg-config \
+            clang \
+            libpq-dev
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
       - name: Install cargo-pgrx
-        run: cargo install cargo-pgrx --version 0.16.1 --locked
-
-      - name: Initialize pgrx
-        run: cargo pgrx init --pg${{ matrix.pg_version }} /usr/lib/postgresql/${{ matrix.pg_version }}/bin/pg_config
-
-      - name: Build extension
-        run: cargo build --release --features pg${{ matrix.pg_version }}
-
-      - name: Package extension
         run: |
-          mkdir -p artifacts
-          cp target/release/librule_engine_postgre_extensions.so artifacts/
-          cp rule_engine_postgre_extensions.control artifacts/
-          cp rule_engine_postgre_extensions--*.sql artifacts/
-          tar -czf rule-engine-postgre-extensions-pg${{ matrix.pg_version }}-linux-x64.tar.gz -C artifacts .
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+          cargo install cargo-pgrx --version 0.16.1 --locked
+      
+      - name: Build .deb package
+        run: |
+          chmod +x build-deb.sh
+          ./build-deb.sh ${{ matrix.pg_version }}
+      
+      - name: Generate checksum
+        run: |
+          cd releases/download/v*
+          sha256sum *.deb > SHA256SUMS-pg${{ matrix.pg_version }}
+          cat SHA256SUMS-pg${{ matrix.pg_version }}
+      
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgresql-${{ matrix.pg_version }}-packages
+          path: releases/download/v*/*.deb
+      
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums-pg${{ matrix.pg_version }}
+          path: releases/download/v*/SHA256SUMS-pg${{ matrix.pg_version }}
+  
+  create-release:
+    name: Create GitHub Release
+    needs: build-packages
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+      
+      - name: List downloaded files
+        run: |
+          ls -lhR dist/
+      
+      - name: Combine checksums
+        run: |
+          cat dist/checksums-pg16/SHA256SUMS-pg16 dist/checksums-pg17/SHA256SUMS-pg17 > dist/SHA256SUMS
+          cat dist/SHA256SUMS
+      
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+      
+      - name: Extract release notes from CHANGELOG
+        id: changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          # Extract current version section from CHANGELOG.md
+          sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | head -n -1 > release_notes.md || echo "See CHANGELOG.md for details" > release_notes.md
+          cat release_notes.md
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: v${{ steps.get_version.outputs.version }} - Rule Repository
+          body_path: release_notes.md
+          files: |
+            dist/postgresql-16-packages/*.deb
+            dist/postgresql-17-packages/*.deb
+            dist/SHA256SUMS
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./rule-engine-postgre-extensions-pg${{ matrix.pg_version }}-linux-x64.tar.gz
-          asset_name: rule-engine-postgre-extensions-pg${{ matrix.pg_version }}-linux-x64.tar.gz
-          asset_content_type: application/gzip
-
-  docker-release:
-    name: Build and Push Docker Image
-    needs: create-release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}

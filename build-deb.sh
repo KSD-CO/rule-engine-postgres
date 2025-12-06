@@ -3,19 +3,33 @@
 
 set -e
 
-VERSION="1.0.0"
+# Extract version from Cargo.toml
+VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+
+if [ -z "$VERSION" ]; then
+    echo "❌ Error: Could not extract version from Cargo.toml"
+    exit 1
+fi
+
 ARCH="amd64"
-PG_VERSION="${1:-16}"  # Default to PostgreSQL 16, allow override with argument
+PG_VERSION="${1:-17}"  # Default to PostgreSQL 17, allow override with argument
 PACKAGE="postgresql-${PG_VERSION}-rule-engine_${VERSION}_${ARCH}"
-DIST_DIR="releases/download/v1.0.0"
+DIST_DIR="releases/download/v${VERSION}"
 
 echo "Building .deb package for PostgreSQL ${PG_VERSION}..."
 
 # Create dist directory
 mkdir -p "${DIST_DIR}"
 
-# Build the extension
-cargo build --release --no-default-features --features pg${PG_VERSION}
+# Build the extension with cargo pgrx package
+echo "Building with cargo pgrx package..."
+PG_CONFIG="/usr/lib/postgresql/${PG_VERSION}/bin/pg_config"
+if [ ! -f "$PG_CONFIG" ]; then
+    echo "❌ Error: pg_config not found at $PG_CONFIG"
+    echo "Please install postgresql-server-dev-${PG_VERSION}"
+    exit 1
+fi
+cargo pgrx package --pg-config "$PG_CONFIG"
 
 # Create package structure
 mkdir -p "${PACKAGE}/DEBIAN"
@@ -23,9 +37,16 @@ mkdir -p "${PACKAGE}/usr/lib/postgresql/${PG_VERSION}/lib"
 mkdir -p "${PACKAGE}/usr/share/postgresql/${PG_VERSION}/extension"
 mkdir -p "${PACKAGE}/usr/share/doc/postgresql-${PG_VERSION}-rule-engine"
 
-# Copy files
-cp target/release/librule_engine_postgres.so \
-   "${PACKAGE}/usr/lib/postgresql/${PG_VERSION}/lib/rule_engine_postgre_extensions.so"
+# Copy files from cargo pgrx package output
+SOURCE_DIR="target/release/rule_engine_postgre_extensions-pg${PG_VERSION}/usr"
+
+if [ ! -d "$SOURCE_DIR" ]; then
+    echo "❌ Error: Build output not found at $SOURCE_DIR"
+    exit 1
+fi
+
+cp "${SOURCE_DIR}/lib/postgresql/${PG_VERSION}/lib/rule_engine_postgre_extensions.so" \
+   "${PACKAGE}/usr/lib/postgresql/${PG_VERSION}/lib/"
 
 cp rule_engine_postgre_extensions.control \
    "${PACKAGE}/usr/share/postgresql/${PG_VERSION}/extension/"

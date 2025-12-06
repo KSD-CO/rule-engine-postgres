@@ -514,6 +514,17 @@ SELECT run_rule_engine(
 
 ## Documentation
 
+### 📚 GitHub Wiki (Recommended)
+Complete user-friendly documentation:
+- **[🏠 Wiki Home](https://github.com/KSD-CO/rule-engine-postgres/wiki)** - Start here!
+- **[⚡ Quick Start](https://github.com/KSD-CO/rule-engine-postgres/wiki/Quick-Start)** - 5-minute tutorial
+- **[📥 Installation Guide](https://github.com/KSD-CO/rule-engine-postgres/wiki/Installation-Guide)** - Step-by-step installation
+- **[📦 Rule Repository](https://github.com/KSD-CO/rule-engine-postgres/wiki/Rule-Repository-Overview)** - Version control for rules
+- **[🔍 API Reference](https://github.com/KSD-CO/rule-engine-postgres/wiki/Repository-Functions)** - Complete function docs
+- **[💼 Use Cases](https://github.com/KSD-CO/rule-engine-postgres/wiki/Use-Case-ECommerce)** - Real-world examples
+
+### 📂 Repository Docs
+Technical documentation in this repo:
 - **[📖 Documentation Index](docs/README.md)** - Complete documentation navigation
 - **[🎯 Backward Chaining Guide](docs/guides/backward-chaining.md)** - Goal-driven reasoning guide
 - **[📦 Rule Repository RFC](docs/rfcs/0001-rule-repository.md)** - Technical design for versioning ⭐ NEW
@@ -554,6 +565,26 @@ Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - Performance benchmarks
 - Integration with popular frameworks (Django, Rails, etc.)
 - Cloud deployment guides (AWS RDS, Google Cloud SQL, Azure)
+
+### For Maintainers
+
+**Version Management:**
+```bash
+# Check current version
+./version.sh
+
+# Bump version (updates all files automatically)
+./bump-version.sh 1.2.0
+
+# Build release packages
+./release.sh
+```
+
+All scripts automatically extract version from `Cargo.toml`, ensuring consistency across:
+- Package names
+- Release URLs
+- SQL migration files
+- Documentation
 
 ---
 

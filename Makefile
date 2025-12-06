@@ -2,10 +2,14 @@
 # For PGXN compatibility and easy building
 
 EXTENSION = rule_engine_postgre_extensions
-DATA = rule_engine_postgre_extensions--1.0.0.sql \
-       rule_engine_postgre_extensions--0.1.0--1.0.0.sql
-DOCS = README.md DEPLOYMENT.md
-VERSION = 1.0.0
+
+# Extract version from Cargo.toml
+VERSION := $(shell grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+
+DATA = rule_engine_postgre_extensions--1.1.0.sql \
+       rule_engine_postgre_extensions--0.1.0--1.0.0.sql \
+       rule_engine_postgre_extensions--1.0.0--1.1.0.sql
+DOCS = README.md docs/deployment/distribution.md
 PG_VERSION ?= 17
 
 # Build with cargo-pgrx
@@ -33,7 +37,12 @@ help:
 
 build:
 	@echo "Building for PostgreSQL $(PG_VERSION)..."
-	cargo build --release --no-default-features --features pg$(PG_VERSION)
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		export MACOSX_DEPLOYMENT_TARGET=15.0; \
+		cargo pgrx package --pg-config $$(brew --prefix postgresql@$(PG_VERSION))/bin/pg_config; \
+	else \
+		cargo pgrx package --pg-config /usr/lib/postgresql/$(PG_VERSION)/bin/pg_config; \
+	fi
 
 install: build
 	@echo "Installing extension..."

@@ -1,24 +1,50 @@
-Source: postgresql-16-rule-engine
+# NOTE: This file is for reference only and not used by build-deb.sh
+# build-deb.sh creates DEBIAN/control dynamically during package build
+# This file would be used if building with debuild or dpkg-buildpackage
+
+Source: rule-engine-postgres
 Section: database
 Priority: optional
 Maintainer: Ton That Vu <ttvuhm@gmail.com>
 Build-Depends: debhelper (>= 11),
-               postgresql-server-dev-16,
+               postgresql-server-dev-16 | postgresql-server-dev-17,
                cargo,
-               rustc (>= 1.75)
-Standards-Version: 4.5.0
-Homepage: https://github.com/yourusername/rule-engine-postgre-extensions
+               rustc (>= 1.75),
+               cargo-pgrx (>= 0.16.1)
+Standards-Version: 4.6.0
+Homepage: https://github.com/KSD-CO/rule-engine-postgres
+Vcs-Browser: https://github.com/KSD-CO/rule-engine-postgres
+Vcs-Git: https://github.com/KSD-CO/rule-engine-postgres.git
 
 Package: postgresql-16-rule-engine
 Architecture: amd64
 Depends: ${shlibs:Depends}, ${misc:Depends}, postgresql-16
-Description: PostgreSQL extension for rule engine with GRL syntax
+Description: PostgreSQL 16 extension for rule engine with GRL syntax
  Production-ready PostgreSQL extension written in Rust that brings
  rule engine capabilities directly into your database. Execute complex
  business logic using the Grule Rule Language (GRL) syntax.
  .
  Features:
   - High performance compiled Rust code
+  - Forward and backward chaining
+  - Rule Repository with versioning and tagging
+  - JSON/JSONB support
+  - Health checks and monitoring
+  - Error codes for debugging
+  - Docker support
+
+Package: postgresql-17-rule-engine
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, postgresql-17
+Description: PostgreSQL 17 extension for rule engine with GRL syntax
+ Production-ready PostgreSQL extension written in Rust that brings
+ rule engine capabilities directly into your database. Execute complex
+ business logic using the Grule Rule Language (GRL) syntax.
+ .
+ Features:
+  - High performance compiled Rust code
+  - Forward and backward chaining
+  - Rule Repository with versioning and tagging
   - JSON/JSONB support
   - Health checks and monitoring
   - Error codes for debugging
