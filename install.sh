@@ -33,16 +33,46 @@ fi
 
 echo "Using pg_config: $PG_CONFIG"
 echo ""
-echo "Note: Using 'cargo pgrx install' instead of 'cargo pgrx package'"
-echo "      This directly installs to PostgreSQL directories."
-echo ""
+echo "Building extension binary..."
+cargo build --release --no-default-features --features pg${PG_VERSION}
 
-# Use sudo for cargo pgrx install since it writes to system directories
-sudo -E env "PATH=$PATH" cargo pgrx install --pg-config "$PG_CONFIG" --release
-
-# cargo pgrx install handles all file copying automatically
 echo ""
-echo "✅ Extension files installed by cargo pgrx install"
+echo "Installing extension files..."
+
+# Detect OS for correct paths
+if [ "$(uname)" = "Darwin" ]; then
+    # macOS paths
+    LIB_DIR="/opt/homebrew/lib/postgresql@${PG_VERSION}"
+    EXT_DIR="/opt/homebrew/share/postgresql@${PG_VERSION}/extension"
+    SO_EXT="dylib"
+else
+    # Linux paths
+    LIB_DIR="/usr/lib/postgresql/${PG_VERSION}/lib"
+    EXT_DIR="/usr/share/postgresql/${PG_VERSION}/extension"
+    SO_EXT="so"
+fi
+
+# Find the shared library
+SO_PATH="target/release/librule_engine_postgres.${SO_EXT}"
+
+if [ ! -f "$SO_PATH" ]; then
+    echo "❌ Error: Shared library not found at $SO_PATH"
+    echo "Build output:"
+    ls -la target/release/ | grep rule_engine || echo "No matching files found"
+    exit 1
+fi
+
+echo "  - Installing shared library to $LIB_DIR"
+sudo cp "$SO_PATH" "${LIB_DIR}/rule_engine_postgre_extensions.${SO_EXT}"
+
+# Copy control file
+echo "  - Copying control file to $EXT_DIR"
+sudo cp rule_engine_postgre_extensions.control "${EXT_DIR}/"
+
+# Copy SQL files
+echo "  - Copying SQL files to $EXT_DIR"
+sudo cp rule_engine_postgre_extensions--*.sql "${EXT_DIR}/"
+sudo chmod 644 "${EXT_DIR}/rule_engine_postgre_extensions--"*.sql
 
 echo ""
 echo "Restarting PostgreSQL..."

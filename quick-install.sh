@@ -8,7 +8,10 @@ echo "🚀 Installing rule-engine-postgres..."
 echo ""
 
 # Detect OS
-if [ -f /etc/os-release ]; then
+if [ "$(uname)" = "Darwin" ]; then
+    OS="macos"
+    VERSION=$(sw_vers -productVersion)
+elif [ -f /etc/os-release ]; then
     . /etc/os-release
     OS=$ID
     VERSION=$VERSION_ID

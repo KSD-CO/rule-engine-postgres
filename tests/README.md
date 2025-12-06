@@ -263,17 +263,34 @@ cargo tarpaulin --out Html --output-dir coverage
 
 Target: >80% code coverage
 
+## Important Note: integration_tests.rs
+
+⚠️ **The file `integration_tests.rs` has been renamed to `integration_tests.rs.disabled`**
+
+**Why?** Standard `cargo test` cannot run pgrx extension tests because:
+- Missing PostgreSQL C symbols (errstart, CurrentMemoryContext, etc.)
+- Requires PostgreSQL runtime and SPI
+- pgrx functions need PostgreSQL memory context
+
+**How to test?** Use `cargo pgrx test pg17` instead, which:
+- Starts a temporary PostgreSQL instance
+- Loads the extension
+- Runs tests in actual PostgreSQL environment
+- Provides all required PostgreSQL symbols
+
+**CI/CD**: GitHub Actions uses `cargo pgrx test` for all testing.
+
 ## Contributing
 
 When adding new features:
 1. ✅ Add test fixtures
-2. ✅ Add integration tests
-3. ✅ Add SQL tests
+2. ✅ Add SQL tests (tests/*.sql)
+3. ✅ Test with `cargo pgrx test pg17`
 4. ✅ Update this README
-5. ✅ Ensure all tests pass
+5. ✅ Ensure all tests pass in CI
 
 ---
 
-**Last Updated**: 2025-12-03
-**Test Count**: 14 integration tests + 14 SQL tests
-**Coverage**: Target 80%+
+**Last Updated**: 2025-12-07
+**Test Files**: SQL-based tests + pgrx tests
+**CI**: `cargo pgrx test pg16` and `pg17`

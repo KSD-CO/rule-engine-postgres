@@ -30,13 +30,9 @@ if [ ! -f "$PG_CONFIG" ]; then
     exit 1
 fi
 
-# Build pgrx_embed first to avoid "Failed to find pgrx_embed binary" error
-echo "Building pgrx_embed..."
-cargo build --release --bin pgrx_embed --no-default-features --features pg${PG_VERSION}
-
-# Now run package (which needs pgrx_embed)
-echo "Running cargo pgrx package..."
-cargo pgrx package --pg-config "$PG_CONFIG"
+# Build the extension binary
+echo "Building extension binary..."
+cargo build --release --no-default-features --features pg${PG_VERSION}
 
 # Create package structure
 mkdir -p "${PACKAGE}/DEBIAN"
@@ -44,16 +40,18 @@ mkdir -p "${PACKAGE}/usr/lib/postgresql/${PG_VERSION}/lib"
 mkdir -p "${PACKAGE}/usr/share/postgresql/${PG_VERSION}/extension"
 mkdir -p "${PACKAGE}/usr/share/doc/postgresql-${PG_VERSION}-rule-engine"
 
-# Copy files from cargo pgrx package output
-SOURCE_DIR="target/release/rule_engine_postgre_extensions-pg${PG_VERSION}/usr"
+# Copy built shared library
+echo "Copying built files..."
+SO_PATH="target/release/librule_engine_postgres.so"
 
-if [ ! -d "$SOURCE_DIR" ]; then
-    echo "❌ Error: Build output not found at $SOURCE_DIR"
+if [ ! -f "$SO_PATH" ]; then
+    echo "❌ Error: Shared library not found at $SO_PATH"
+    ls -la target/release/ | grep rule_engine || echo "No matching files"
     exit 1
 fi
 
-cp "${SOURCE_DIR}/lib/postgresql/${PG_VERSION}/lib/rule_engine_postgre_extensions.so" \
-   "${PACKAGE}/usr/lib/postgresql/${PG_VERSION}/lib/"
+cp "${SO_PATH}" \
+   "${PACKAGE}/usr/lib/postgresql/${PG_VERSION}/lib/rule_engine_postgre_extensions.so"
 
 cp rule_engine_postgre_extensions.control \
    "${PACKAGE}/usr/share/postgresql/${PG_VERSION}/extension/"
