@@ -22,9 +22,10 @@ impl SemanticVersion {
 
         let numbers: Vec<&str> = version_part.split('.').collect();
         if numbers.len() != 3 {
-            return Err(RuleEngineError::InvalidInput(
-                format!("Invalid version format: {}", version),
-            ));
+            return Err(RuleEngineError::InvalidInput(format!(
+                "Invalid version format: {}",
+                version
+            )));
         }
 
         Ok(SemanticVersion {
@@ -133,7 +134,7 @@ mod tests {
     #[test]
     fn test_increment_version() {
         let v = SemanticVersion::parse("1.2.3").unwrap();
-        
+
         assert_eq!(v.increment_patch().to_string(), "1.2.4");
         assert_eq!(v.increment_minor().to_string(), "1.3.0");
         assert_eq!(v.increment_major().to_string(), "2.0.0");

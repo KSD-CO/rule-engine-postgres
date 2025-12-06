@@ -64,12 +64,10 @@ pub fn validate_version(version: &str) -> Result<(), RuleEngineError> {
 
     let re = Regex::new(r"^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$").unwrap();
     if !re.is_match(version) {
-        return Err(RuleEngineError::InvalidInput(
-            format!(
-                "Invalid version '{}'. Must follow semantic versioning (e.g., 1.0.0, 2.1.0-beta)",
-                version
-            ),
-        ));
+        return Err(RuleEngineError::InvalidInput(format!(
+            "Invalid version '{}'. Must follow semantic versioning (e.g., 1.0.0, 2.1.0-beta)",
+            version
+        )));
     }
 
     Ok(())
@@ -111,7 +109,7 @@ mod tests {
         assert!(validate_rule_name("valid_rule").is_ok());
         assert!(validate_rule_name("Rule123").is_ok());
         assert!(validate_rule_name("my-rule-name").is_ok());
-        
+
         assert!(validate_rule_name("").is_err());
         assert!(validate_rule_name("123invalid").is_err());
         assert!(validate_rule_name("invalid name").is_err());
@@ -124,7 +122,7 @@ mod tests {
         assert!(validate_version("2.5.10").is_ok());
         assert!(validate_version("1.0.0-beta").is_ok());
         assert!(validate_version("1.0.0-alpha1").is_ok());
-        
+
         assert!(validate_version("").is_err());
         assert!(validate_version("1.0").is_err());
         assert!(validate_version("v1.0.0").is_err());
@@ -136,7 +134,7 @@ mod tests {
         assert!(validate_tag("discount").is_ok());
         assert!(validate_tag("pricing-rule").is_ok());
         assert!(validate_tag("rule_123").is_ok());
-        
+
         assert!(validate_tag("").is_err());
         assert!(validate_tag("Discount").is_err());
         assert!(validate_tag("123tag").is_err());

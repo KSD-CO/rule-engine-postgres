@@ -3,12 +3,12 @@
 
 pub mod models;
 pub mod queries;
+pub mod test_spi;
 pub mod validation;
 pub mod version;
-pub mod test_spi;
 
 pub use models::{RuleDefinition, RuleVersion};
 pub use queries::*;
+pub use test_spi::test_spi_simple;
 pub use validation::*;
 pub use version::*;
-pub use test_spi::test_spi_simple;

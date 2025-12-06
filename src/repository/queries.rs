@@ -1,29 +1,29 @@
 // Query functions for Rule Repository
 // Implements the core CRUD operations for rules
 
-use pgrx::prelude::*;
-use pgrx::spi::SpiTupleTable;
 use crate::error::RuleEngineError;
 use crate::repository::validation::*;
 use crate::repository::version::SemanticVersion;
+use pgrx::prelude::*;
+use pgrx::spi::SpiTupleTable;
 
 /// Save a rule to the repository with versioning
-/// 
+///
 /// # Arguments
 /// * `name` - Unique rule name (alphanumeric + underscore/hyphen)
 /// * `grl_content` - GRL rule definition
 /// * `version` - Optional semantic version (auto-incremented if None)
 /// * `description` - Optional rule description
 /// * `change_notes` - Optional notes about what changed in this version
-/// 
+///
 /// # Returns
 /// Rule ID on success
-/// 
+///
 /// # Errors
 /// * `RE-001` - Invalid rule name format
 /// * `RE-002` - GRL content validation failed
 /// * `RE-003` - Invalid semantic version format
-/// 
+///
 /// # Example
 /// ```sql
 /// SELECT rule_save('discount_rule', 'rule "Discount" { ... }', '1.0.0', 'Discount calculator');
@@ -50,15 +50,17 @@ pub fn rule_save(
     let rule_exists: bool = Spi::get_one(&format!(
         "SELECT EXISTS(SELECT 1 FROM rule_definitions WHERE name = '{}')",
         name.replace("'", "''")
-    ))?.unwrap_or(false);
-    
+    ))?
+    .unwrap_or(false);
+
     let rule_id = if rule_exists {
         // Rule exists - get ID and update metadata
         let id: i32 = Spi::get_one(&format!(
             "SELECT id FROM rule_definitions WHERE name = '{}'",
             name.replace("'", "''")
-        ))?.ok_or_else(|| RuleEngineError::DatabaseError("Failed to get rule ID".to_string()))?;
-        
+        ))?
+        .ok_or_else(|| RuleEngineError::DatabaseError("Failed to get rule ID".to_string()))?;
+
         Spi::run(&format!(
             "UPDATE rule_definitions SET updated_at = NOW(), updated_by = '{}' WHERE id = {}",
             current_user.replace("'", "''"),
@@ -67,10 +69,11 @@ pub fn rule_save(
         id
     } else {
         // Create new rule
-        let desc_sql = description.as_ref()
+        let desc_sql = description
+            .as_ref()
             .map(|d| format!("'{}'", d.replace("'", "''")))
             .unwrap_or_else(|| "NULL".to_string());
-        
+
         let new_id: i32 = Spi::get_one(&format!(
             "INSERT INTO rule_definitions (name, description, created_by, updated_by, is_active) 
              VALUES ('{}', {}, '{}', '{}', true) 
@@ -79,7 +82,8 @@ pub fn rule_save(
             desc_sql,
             current_user.replace("'", "''"),
             current_user.replace("'", "''")
-        ))?.ok_or_else(|| RuleEngineError::DatabaseError("Failed to insert rule".to_string()))?;
+        ))?
+        .ok_or_else(|| RuleEngineError::DatabaseError("Failed to insert rule".to_string()))?;
         new_id
     };
 
@@ -114,7 +118,8 @@ pub fn rule_save(
         "SELECT EXISTS(SELECT 1 FROM rule_versions WHERE rule_id = {} AND version = '{}')",
         rule_id,
         version_number.replace("'", "''")
-    ))?.unwrap_or(false);
+    ))?
+    .unwrap_or(false);
 
     if version_exists {
         return Err(RuleEngineError::InvalidInput(format!(
@@ -130,10 +135,11 @@ pub fn rule_save(
     ))?;
 
     // Insert new version (first version is automatically default)
-    let change_notes_sql = change_notes.as_ref()
+    let change_notes_sql = change_notes
+        .as_ref()
         .map(|c| format!("'{}'", c.replace("'", "''")))
         .unwrap_or_else(|| "NULL".to_string());
-    
+
     Spi::run(&format!(
         "INSERT INTO rule_versions (rule_id, version, grl_content, change_notes, created_by, is_default)
          VALUES ({}, '{}', '{}', {}, '{}', {})",
@@ -149,24 +155,21 @@ pub fn rule_save(
 }
 
 /// Get GRL content for a rule
-/// 
+///
 /// # Arguments
 /// * `name` - Rule name
 /// * `version` - Optional specific version (uses default if None)
-/// 
+///
 /// # Returns
 /// GRL content (TEXT)
-/// 
+///
 /// # Example
 /// ```sql
 /// SELECT rule_get('discount_rule');
 /// SELECT rule_get('discount_rule', '1.0.0');
 /// ```
 #[pg_extern]
-pub fn rule_get(
-    name: String,
-    version: Option<String>,
-) -> Result<String, RuleEngineError> {
+pub fn rule_get(name: String, version: Option<String>) -> Result<String, RuleEngineError> {
     validate_rule_name(&name)?;
 
     if let Some(ref v) = version {
@@ -201,17 +204,19 @@ pub fn rule_get(
         RuleEngineError::RuleNotFound(format!(
             "Rule '{}' {} not found",
             name,
-            version.map(|v| format!("version '{}'", v)).unwrap_or_else(|| "(default)".to_string())
+            version
+                .map(|v| format!("version '{}'", v))
+                .unwrap_or_else(|| "(default)".to_string())
         ))
     })
 }
 
 /// Activate a specific version as the default
-/// 
+///
 /// # Arguments
 /// * `name` - Rule name
 /// * `version` - Version to activate
-/// 
+///
 /// # Example
 /// ```sql
 /// SELECT rule_activate('discount_rule', '1.0.0');
@@ -232,10 +237,7 @@ pub fn rule_activate(name: String, version: String) -> Result<bool, RuleEngineEr
     ))?;
 
     let version_id = version_id.ok_or_else(|| {
-        RuleEngineError::RuleNotFound(format!(
-            "Rule '{}' version '{}' not found",
-            name, version
-        ))
+        RuleEngineError::RuleNotFound(format!("Rule '{}' version '{}' not found", name, version))
     })?;
 
     // Set as default (trigger will unset others)
@@ -248,21 +250,18 @@ pub fn rule_activate(name: String, version: String) -> Result<bool, RuleEngineEr
 }
 
 /// Delete a rule or specific version
-/// 
+///
 /// # Arguments
 /// * `name` - Rule name
 /// * `version` - Optional specific version (deletes all versions if None)
-/// 
+///
 /// # Example
 /// ```sql
 /// SELECT rule_delete('discount_rule', '1.0.0');
 /// SELECT rule_delete('discount_rule'); -- Delete entire rule
 /// ```
 #[pg_extern]
-pub fn rule_delete(
-    name: String,
-    version: Option<String>,
-) -> Result<bool, RuleEngineError> {
+pub fn rule_delete(name: String, version: Option<String>) -> Result<bool, RuleEngineError> {
     validate_rule_name(&name)?;
 
     if let Some(ref v) = version {
@@ -276,7 +275,8 @@ pub fn rule_delete(
              WHERE rd.name = '{}' AND rv.version = '{}'",
             name.replace("'", "''"),
             v.replace("'", "''")
-        ))?.unwrap_or(false);
+        ))?
+        .unwrap_or(false);
 
         if is_default {
             return Err(RuleEngineError::InvalidInput(
@@ -317,8 +317,8 @@ pub fn rule_tag_add(name: String, tag: String) -> Result<bool, RuleEngineError> 
         name.replace("'", "''")
     ))?;
 
-    let rule_id =
-        rule_id.ok_or_else(|| RuleEngineError::RuleNotFound(format!("Rule '{}' not found", name)))?;
+    let rule_id = rule_id
+        .ok_or_else(|| RuleEngineError::RuleNotFound(format!("Rule '{}' not found", name)))?;
 
     Spi::run(&format!(
         "INSERT INTO rule_tags (rule_id, tag) VALUES ({}, '{}') ON CONFLICT DO NOTHING",
@@ -347,15 +347,15 @@ pub fn rule_tag_remove(name: String, tag: String) -> Result<bool, RuleEngineErro
 }
 
 /// Execute a stored rule by name
-/// 
+///
 /// # Arguments
 /// * `name` - Rule name
 /// * `facts_json` - Input facts as JSON string
 /// * `version` - Optional specific version (uses default if None)
-/// 
+///
 /// # Returns
 /// Modified facts (JSON string)
-/// 
+///
 /// # Example
 /// ```sql
 /// SELECT rule_execute_by_name('discount_rule', '{"Order": {"Amount": 150}}');
@@ -376,16 +376,16 @@ pub fn rule_execute_by_name(
 }
 
 /// Query backward chaining goal using stored rule by name
-/// 
+///
 /// # Arguments
 /// * `name` - Rule name
 /// * `facts_json` - Input facts as JSON string
 /// * `goal` - Goal query (e.g., "User.CanBuy == true")
 /// * `version` - Optional specific version (uses default if None)
-/// 
+///
 /// # Returns
 /// JSON with provability result and proof trace
-/// 
+///
 /// # Example
 /// ```sql
 /// SELECT rule_query_by_name('eligibility_rules', '{"User": {"Age": 25}}', 'User.CanVote == true');
@@ -407,16 +407,16 @@ pub fn rule_query_by_name(
 }
 
 /// Check if goal can be proven using stored rule by name (fast boolean check)
-/// 
+///
 /// # Arguments
 /// * `name` - Rule name
 /// * `facts_json` - Input facts as JSON string
 /// * `goal` - Goal query
 /// * `version` - Optional specific version (uses default if None)
-/// 
+///
 /// # Returns
 /// Boolean - true if goal is provable
-/// 
+///
 /// # Example
 /// ```sql
 /// SELECT rule_can_prove_by_name('eligibility_rules', '{"User": {"Age": 25}}', 'User.CanVote == true');

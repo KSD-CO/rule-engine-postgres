@@ -14,8 +14,8 @@ pub use api::backward::{can_prove_goal, query_backward_chaining, query_backward_
 
 // Re-export public API functions - Rule Repository
 pub use repository::queries::{
-    rule_save, rule_get, rule_activate, rule_delete, rule_tag_add, rule_tag_remove,
-    rule_execute_by_name, rule_query_by_name, rule_can_prove_by_name,
+    rule_activate, rule_can_prove_by_name, rule_delete, rule_execute_by_name, rule_get,
+    rule_query_by_name, rule_save, rule_tag_add, rule_tag_remove,
 };
 pub use repository::test_spi::test_spi_simple;
 
