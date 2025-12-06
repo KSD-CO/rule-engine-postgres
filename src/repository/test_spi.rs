@@ -12,7 +12,7 @@ pub fn test_spi_simple() -> String {
     validate_grl_content(grl_content).ok();
 
     // Step 2: Get user
-    let current_user: String = Spi::get_one("SELECT user")
+    let _current_user: String = Spi::get_one("SELECT user")
         .ok()
         .flatten()
         .unwrap_or_else(|| "unknown".to_string());

@@ -1,6 +1,7 @@
 // Data models for Rule Repository
 use serde::{Deserialize, Serialize};
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuleDefinition {
     pub id: i32,
@@ -13,6 +14,7 @@ pub struct RuleDefinition {
     pub is_active: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuleVersion {
     pub id: i32,
@@ -25,6 +27,7 @@ pub struct RuleVersion {
     pub is_default: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuleListItem {
     pub id: i32,

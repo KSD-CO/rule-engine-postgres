@@ -5,7 +5,6 @@ use crate::error::RuleEngineError;
 use crate::repository::validation::*;
 use crate::repository::version::SemanticVersion;
 use pgrx::prelude::*;
-use pgrx::spi::SpiTupleTable;
 
 /// Save a rule to the repository with versioning
 ///

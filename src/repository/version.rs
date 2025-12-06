@@ -1,5 +1,6 @@
 // Version management utilities
 use crate::error::RuleEngineError;
+use std::fmt;
 
 /// Parse semantic version into components
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,14 +43,8 @@ impl SemanticVersion {
         })
     }
 
-    pub fn to_string(&self) -> String {
-        match &self.pre_release {
-            Some(pre) => format!("{}.{}.{}-{}", self.major, self.minor, self.patch, pre),
-            None => format!("{}.{}.{}", self.major, self.minor, self.patch),
-        }
-    }
-
     /// Increment patch version
+    #[allow(dead_code)]
     pub fn increment_patch(&self) -> Self {
         SemanticVersion {
             major: self.major,
@@ -60,6 +55,7 @@ impl SemanticVersion {
     }
 
     /// Increment minor version
+    #[allow(dead_code)]
     pub fn increment_minor(&self) -> Self {
         SemanticVersion {
             major: self.major,
@@ -70,12 +66,22 @@ impl SemanticVersion {
     }
 
     /// Increment major version
+    #[allow(dead_code)]
     pub fn increment_major(&self) -> Self {
         SemanticVersion {
             major: self.major + 1,
             minor: 0,
             patch: 0,
             pre_release: None,
+        }
+    }
+}
+
+impl fmt::Display for SemanticVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.pre_release {
+            Some(pre) => write!(f, "{}.{}.{}-{}", self.major, self.minor, self.patch, pre),
+            None => write!(f, "{}.{}.{}", self.major, self.minor, self.patch),
         }
     }
 }
