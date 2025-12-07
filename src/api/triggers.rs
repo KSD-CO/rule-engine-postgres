@@ -120,7 +120,7 @@ fn rule_trigger_history(
     );
 
     let result = Spi::get_one::<String>(&query)?;
-    
+
     Ok(result.unwrap_or_else(|| "[]".to_string()))
 }
 
@@ -143,10 +143,7 @@ fn rule_trigger_history(
 fn rule_trigger_delete(
     trigger_id: i32,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let result = Spi::get_one::<bool>(&format!(
-        "SELECT rule_trigger_delete({})",
-        trigger_id
-    ))?;
+    let result = Spi::get_one::<bool>(&format!("SELECT rule_trigger_delete({})", trigger_id))?;
 
     result.ok_or_else(|| "Failed to delete trigger".into())
 }
@@ -158,8 +155,10 @@ mod tests {
     #[pg_test]
     fn test_trigger_lifecycle() {
         // Create test table
-        Spi::run("CREATE TABLE test_orders (id SERIAL PRIMARY KEY, amount NUMERIC, discount NUMERIC)")
-            .expect("Failed to create test table");
+        Spi::run(
+            "CREATE TABLE test_orders (id SERIAL PRIMARY KEY, amount NUMERIC, discount NUMERIC)",
+        )
+        .expect("Failed to create test table");
 
         // Create test rule
         Spi::run(
@@ -169,29 +168,21 @@ mod tests {
         .expect("Failed to create test rule");
 
         // Create trigger
-        let trigger_id = rule_trigger_create(
-            "test_trigger",
-            "test_orders",
-            "test_rule",
-            "INSERT",
-        )
-        .expect("Failed to create trigger");
+        let trigger_id = rule_trigger_create("test_trigger", "test_orders", "test_rule", "INSERT")
+            .expect("Failed to create trigger");
 
         assert!(trigger_id > 0, "Trigger ID should be positive");
 
         // Disable trigger
-        let disabled = rule_trigger_enable(trigger_id, false)
-            .expect("Failed to disable trigger");
+        let disabled = rule_trigger_enable(trigger_id, false).expect("Failed to disable trigger");
         assert!(disabled, "Should return true when disabling");
 
         // Re-enable trigger
-        let enabled = rule_trigger_enable(trigger_id, true)
-            .expect("Failed to enable trigger");
+        let enabled = rule_trigger_enable(trigger_id, true).expect("Failed to enable trigger");
         assert!(enabled, "Should return true when enabling");
 
         // Delete trigger
-        let deleted = rule_trigger_delete(trigger_id)
-            .expect("Failed to delete trigger");
+        let deleted = rule_trigger_delete(trigger_id).expect("Failed to delete trigger");
         assert!(deleted, "Should return true when deleting");
 
         // Cleanup
