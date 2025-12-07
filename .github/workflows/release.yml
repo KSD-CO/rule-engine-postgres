@@ -92,11 +92,17 @@ jobs:
       
       - name: List downloaded files
         run: |
+          echo "=== Directory structure ==="
           ls -lhR dist/
+          echo ""
+          echo "=== Finding checksum files ==="
+          find dist/ -name "SHA256SUMS*" -type f
       
       - name: Combine checksums
         run: |
-          cat dist/checksums-pg16/SHA256SUMS-pg16 dist/checksums-pg17/SHA256SUMS-pg17 > dist/SHA256SUMS
+          # Find and combine checksum files
+          find dist/ -name "SHA256SUMS-pg*" -type f -exec cat {} \; > dist/SHA256SUMS
+          echo "=== Combined checksums ==="
           cat dist/SHA256SUMS
       
       - name: Get version from tag
