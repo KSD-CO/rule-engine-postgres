@@ -1,7 +1,7 @@
 # rule-engine-postgres
 
 [![CI](https://github.com/KSD-CO/rule-engine-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/KSD-CO/rule-engine-postgres/actions)
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Production-ready** PostgreSQL extension written in Rust that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) syntax with **forward chaining**, **backward chaining**, and **rule versioning** support.
@@ -76,6 +76,48 @@ git clone https://github.com/KSD-CO/rule-engine-postgres.git
 cd rule-engine-postgres
 ./install.sh
 ```
+
+---
+
+## What's New in v1.3.0 ⭐
+
+### Rule Sets (Collections) + Execution Statistics
+
+Complete rule organization and performance monitoring!
+
+- **📦 Rule Sets**: Group multiple rules into reusable collections
+  - Execute rules sequentially in defined order
+  - Version control per rule in the set
+  - Easy management: add, remove, reorder rules
+  
+- **📊 Execution Statistics**: Track every rule execution
+  - Success/failure rates with error details
+  - Performance metrics: avg, min, max, p95, p99
+  - Facts modified and rules fired tracking
+  - Time-range queries for trend analysis
+
+```sql
+-- Create a rule set
+SELECT ruleset_create('loan_processing', 'Loan approval workflow');
+
+-- Add rules in order
+SELECT ruleset_add_rule(1, 'credit_check', '1.0.0', 0);
+SELECT ruleset_add_rule(1, 'income_verification', '1.0.0', 1);
+SELECT ruleset_add_rule(1, 'debt_ratio', '1.0.0', 2);
+
+-- Execute entire set
+SELECT ruleset_execute(1, '{"applicant": {"credit_score": 750}}');
+
+-- Track performance
+SELECT rule_stats('credit_check', NOW() - INTERVAL '7 days', NOW());
+SELECT * FROM rule_performance_summary WHERE rule_name = 'credit_check';
+```
+
+**New Functions**: 
+- Rule Sets: `ruleset_create`, `ruleset_add_rule`, `ruleset_execute`, `ruleset_delete`, `ruleset_list`, `ruleset_get_rules`
+- Statistics: `rule_record_execution`, `rule_stats`, `rule_performance_report`, `rule_clear_stats`
+
+**Migration**: Run `migrations/003_rule_sets_and_stats.sql` or upgrade with `ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.3.0';`
 
 ---
 
@@ -737,7 +779,66 @@ src/
 
 ---
 
-## What's New in v1.2.0 ⭐
+## What's New in v1.3.0 ⭐
+
+### Rule Sets & Execution Statistics
+
+Enterprise-grade rule management with collections and comprehensive monitoring!
+
+#### Rule Sets (Collections)
+Group multiple rules into reusable, ordered collections that execute sequentially:
+
+- **📦 Rule Grouping**: Combine related rules into named collections
+- **🔢 Execution Order**: Control rule sequence with ordering
+- **🔄 Sequential Execution**: Chain rules where output becomes next input
+- **✅ Easy Management**: Add/remove rules without modifying code
+
+```sql
+-- Create a loan approval rule set
+SELECT ruleset_create('loan_approval', 'Complete loan approval workflow');
+
+-- Add rules in specific order
+SELECT ruleset_add_rule(1, 'credit_check', '1.0.0', 0);
+SELECT ruleset_add_rule(1, 'income_verification', '1.0.0', 1);
+SELECT ruleset_add_rule(1, 'debt_ratio', '1.0.0', 2);
+
+-- Execute entire workflow with one call
+SELECT ruleset_execute(1, '{"CreditScore": 750, "Income": 60000}');
+```
+
+#### Execution Statistics
+Track and analyze rule performance in production:
+
+- **📊 Comprehensive Metrics**: Count, duration, success rate, percentiles (p50/p95/p99)
+- **📈 Performance Trends**: Track execution patterns over time
+- **🎯 Success Tracking**: Monitor failure rates and error messages
+- **🔍 Detailed Analysis**: Facts modified, rules fired per execution
+- **📉 Performance Reports**: Identify slow or frequently-used rules
+
+```sql
+-- Record execution
+SELECT rule_record_execution('pricing_rule', '1.0.0', 42.5, true, NULL, 3, 5);
+
+-- Get detailed statistics
+SELECT rule_stats('pricing_rule', NOW() - INTERVAL '7 days', NOW());
+-- Returns: {"total_executions": 150, "success_rate": 98.5, "avg_ms": 38.2, ...}
+
+-- Performance report for all rules
+SELECT * FROM rule_performance_report(50, 'total_executions');
+
+-- Monitor with aggregated view
+SELECT * FROM rule_performance_summary WHERE rule_name = 'pricing_rule';
+```
+
+**New Functions**: 
+- Rule Sets: `ruleset_create`, `ruleset_add_rule`, `ruleset_remove_rule`, `ruleset_execute`, `ruleset_delete`
+- Statistics: `rule_record_execution`, `rule_stats`, `rule_performance_report`, `rule_clear_stats`
+
+**Migration**: Run `migrations/003_rule_sets_and_stats.sql` or upgrade with `ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.3.0';`
+
+---
+
+## What's New in v1.2.0
 
 ### Event Triggers Integration
 

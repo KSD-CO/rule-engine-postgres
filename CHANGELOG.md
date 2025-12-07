@@ -5,6 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-12-07
+
+### Added
+
+#### Rule Sets (Collections) 🎉
+
+**Database Schema:**
+- `rule_sets` table: Named collections of rules with metadata
+- `rule_set_members` table: Rule-to-set mapping with execution order
+- `rule_performance_summary` view: Aggregated metrics per rule
+- Cascade deletion for rule set cleanup
+- Indexes for optimized lookups
+
+**New SQL Functions:**
+- `ruleset_create(name, description)` - Create new rule collections
+- `ruleset_add_rule(ruleset_id, rule_name, rule_version, order)` - Add rules with ordering
+- `ruleset_remove_rule(ruleset_id, rule_name, rule_version)` - Remove rules from sets
+- `ruleset_execute(ruleset_id, facts_json)` - Execute all rules sequentially
+- `ruleset_list()` - List all rule sets with member count
+- `ruleset_get_rules(ruleset_id)` - View rules in a set ordered by execution order
+- `ruleset_delete(ruleset_id)` - Delete rule sets
+
+**Features:**
+- Group multiple rules into reusable workflows
+- Configurable execution order (lower numbers execute first)
+- Sequential execution with output chaining
+- Version-specific or default rule selection
+- Active/inactive rule set management
+
+**Rust API Wrapper:**
+- `src/api/rulesets.rs` with 5 exported functions
+- Full error handling and input validation
+- Comprehensive documentation and examples
+
+#### Execution Statistics Tracking 📊
+
+**Database Schema:**
+- `rule_execution_stats` table: Detailed execution records
+- Tracks: duration, success/failure, facts modified, rules fired
+- Time-series data with indexes for efficient querying
+- Configurable retention and cleanup
+
+**New SQL Functions:**
+- `rule_record_execution(rule_name, version, time_ms, success, error, facts_modified, rules_fired)` - Log executions
+- `rule_stats(rule_name, start_time, end_time)` - Comprehensive statistics with percentiles
+- `rule_performance_report(limit, order_by)` - Top rules by execution/performance
+- `rule_clear_stats(rule_name, before_date)` - Cleanup old statistics
+
+**Statistics Include:**
+- Total executions, success/failure counts, success rate
+- Execution time: avg/min/max/median/p95/p99
+- Facts modified and rules fired aggregates
+- Recent error messages for debugging
+- First and last execution timestamps
+
+**Rust API Wrapper:**
+- `src/api/stats.rs` with 3 exported functions
+- JSON output for easy integration
+- Optional time range filtering
+- Efficient batch cleanup
+
+### Changed
+- Updated version to 1.3.0 across all files
+- Enhanced control file description to include rule sets and statistics
+- Updated `src/api/mod.rs` to export new modules
+
+### Documentation
+- Comprehensive test suite in `tests/test_rule_sets_and_stats.sql`
+- 15 test scenarios covering all features
+- Error handling and edge case tests
+- Usage examples in README
+- Migration guide in CHANGELOG
+
+### Migration
+Run `migrations/003_rule_sets_and_stats.sql` or use:
+```sql
+ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.3.0';
+```
+
+---
+
 ## [1.2.0] - 2025-12-07
 
 ### Added
