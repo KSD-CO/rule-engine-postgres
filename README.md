@@ -734,11 +734,40 @@ src/
 
 ---
 
-**Version**: 1.1.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
+**Version**: 1.2.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
 
 ---
 
-## What's New in v1.1.0 ⭐
+## What's New in v1.2.0 ⭐
+
+### Event Triggers Integration
+
+Automatic rule execution when database tables change - no application code needed!
+
+- **🔔 Auto-Execute Rules**: Trigger rules on INSERT/UPDATE/DELETE operations
+- **📊 Full Audit Trail**: Track every execution with OLD/NEW data snapshots
+- **⚡ High Performance**: ~1-5ms overhead per trigger execution
+- **🎛️ Enable/Disable**: Control triggers without deleting them
+- **📈 Real-time Stats**: Monitor performance with `rule_trigger_stats` view
+- **🛡️ Error Handling**: Failures logged but don't break transactions
+
+```sql
+-- Complete workflow example
+SELECT rule_trigger_create('order_discount', 'orders', 'discount_rule', 'INSERT');
+-- Now every INSERT automatically applies discount rules!
+
+SELECT * FROM rule_trigger_stats;  -- Monitor performance
+SELECT rule_trigger_history(1);     -- View execution history
+SELECT rule_trigger_enable(1, FALSE);  -- Disable during maintenance
+```
+
+**New Functions**: `rule_trigger_create`, `rule_trigger_enable`, `rule_trigger_history`, `rule_trigger_delete`
+
+**Migration**: Run `migrations/002_rule_triggers.sql` or upgrade with `ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.2.0';`
+
+---
+
+## What's New in v1.1.0
 
 ### Rule Repository & Versioning System
 

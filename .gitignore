@@ -44,3 +44,4 @@ postgresql-*-rule-engine_*/
 # Environment
 .env
 .env.local
+sync-wiki.sh
