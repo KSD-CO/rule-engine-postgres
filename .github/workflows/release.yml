@@ -131,8 +131,7 @@ jobs:
           name: v${{ steps.get_version.outputs.version }} - Rule Repository
           body_path: release_notes.md
           files: |
-            dist/postgresql-16-packages/*.deb
-            dist/postgresql-17-packages/*.deb
+            dist/**/*.deb
             dist/SHA256SUMS
           draft: false
           prerelease: false
