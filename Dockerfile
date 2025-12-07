@@ -28,9 +28,19 @@ COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 COPY rule_engine_postgre_extensions.control ./
 COPY rule_engine_postgre_extensions--0.1.0.sql ./
+COPY rule_engine_postgre_extensions--1.0.0.sql ./
+COPY migrations ./migrations
 
-# Build and install the extension
-RUN cargo pgrx install --release --no-default-features --features pg17 --pg-config /usr/bin/pg_config
+# Build the extension (don't use cargo pgrx install - pgrx_embed not available)
+RUN cargo build --release --no-default-features --features pg17
+
+# Manually install files
+RUN PG_LIB=$(pg_config --pkglibdir) && \
+    PG_SHARE=$(pg_config --sharedir) && \
+    mkdir -p "$PG_LIB" "$PG_SHARE/extension" && \
+    cp target/release/librule_engine_postgre_extensions.so "$PG_LIB/rule_engine_postgre_extensions.so" && \
+    cp rule_engine_postgre_extensions.control "$PG_SHARE/extension/" && \
+    cp rule_engine_postgre_extensions--*.sql "$PG_SHARE/extension/"
 
 # Clean up build dependencies to reduce image size
 RUN apt-get purge -y \
