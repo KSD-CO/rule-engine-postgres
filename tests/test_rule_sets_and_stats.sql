@@ -2,6 +2,21 @@
 -- Version: 1.3.0
 
 -- ============================================================================
+-- PREREQUISITES: Ensure extension is installed
+-- ============================================================================
+
+-- Check if extension exists, if not provide helpful message
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'rule_engine_postgre_extensions') THEN
+        RAISE EXCEPTION 'Extension not installed. Please run: CREATE EXTENSION rule_engine_postgre_extensions;';
+    END IF;
+END $$;
+
+-- Verify version
+SELECT rule_engine_version() as extension_version;
+
+-- ============================================================================
 -- SETUP
 -- ============================================================================
 

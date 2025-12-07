@@ -142,13 +142,13 @@ BEGIN
         RAISE EXCEPTION 'Rule set ID % does not exist', p_ruleset_id;
     END IF;
 
-    -- Validate rule exists
-    IF NOT EXISTS (
-        SELECT 1 FROM rule_definitions 
-        WHERE name = p_rule_name 
-        AND (p_rule_version IS NULL OR version = p_rule_version)
-    ) THEN
-        RAISE EXCEPTION 'Rule "%" version "%" does not exist', p_rule_name, COALESCE(p_rule_version, 'any');
+    -- Validate rule exists (if rule_definitions table exists from v1.1.0)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'rule_definitions') THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM rule_definitions WHERE name = p_rule_name
+        ) THEN
+            RAISE EXCEPTION 'Rule "%" does not exist in rule_definitions', p_rule_name;
+        END IF;
     END IF;
 
     -- Insert or update rule set member

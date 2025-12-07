@@ -79,9 +79,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migration guide in CHANGELOG
 
 ### Migration
-Run `migrations/003_rule_sets_and_stats.sql` or use:
+
+**Upgrade from existing installation:**
 ```sql
+-- For existing v1.0.0, v1.1.0, or v1.2.0 users
 ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.3.0';
+-- PostgreSQL will automatically apply all intermediate migrations
+```
+
+**Fresh installation:**
+```sql
+CREATE EXTENSION rule_engine_postgre_extensions;
+-- Installs v1.3.0 with all features (Rule Repository + Event Triggers + Rule Sets + Stats)
+```
+
+**Manual migration (if needed):**
+```bash
+psql -d your_database -f migrations/003_rule_sets_and_stats.sql
+```
+
+**Verify installation:**
+```sql
+SELECT rule_engine_version();  -- Should return "1.3.0"
+SELECT COUNT(*) FROM rule_sets;  -- Should work (new table)
+SELECT COUNT(*) FROM rule_execution_stats;  -- Should work (new table)
 ```
 
 ---
@@ -128,6 +149,21 @@ ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.3.0';
 - Fixed Rust compilation errors in triggers module (simplified SPI usage)
 - Updated `rule_trigger_history()` to return JSON instead of table type
 - Dockerfile now uses `cargo build` + manual copy (avoids pgrx_embed dependency)
+
+### Migration
+
+**Upgrade from v1.0.0 or v1.1.0:**
+```sql
+ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.2.0';
+```
+
+**Fresh installation:**
+```sql
+CREATE EXTENSION rule_engine_postgre_extensions;
+-- Installs v1.3.0 (latest) with all features
+```
+
+---
 
 ## [1.1.0] - 2025-12-06
 
@@ -188,6 +224,19 @@ ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.3.0';
 - Used EXISTS queries to avoid InvalidPosition errors
 - Implemented proper SQL escaping for user inputs
 - All functions tested and validated in PostgreSQL 17
+
+### Migration
+
+**Upgrade from v1.0.0:**
+```sql
+ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.1.0';
+```
+
+**Fresh installation:**
+```sql
+CREATE EXTENSION rule_engine_postgre_extensions;
+-- Installs latest version (currently 1.3.0) with all features
+```
 
 ---
 
