@@ -258,7 +258,6 @@ SELECT rule_trigger_enable(1, TRUE);   -- Re-enable
 -- 8. Clean up
 SELECT rule_trigger_delete(1);
 ```
-```
 
 **When to use each mode:**
 - **Forward Chaining**: Event processing, data enrichment, monitoring
