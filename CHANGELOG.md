@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-12-07
+
+### Added
+
+#### Event Triggers Integration 🎉 (RFC-0002)
+
+**Database Schema:**
+- `rule_triggers` table: Trigger configurations with foreign key to rule_definitions
+- `rule_trigger_history` table: Execution audit trail with timing metrics
+- `rule_trigger_stats` view: Real-time statistics for monitoring
+- Generic trigger function `execute_rule_trigger()` for all event types
+- Indexes for performance optimization
+
+**New SQL Functions:**
+- `rule_trigger_create(name, table_name, rule_name, event_type)` - Create automatic triggers
+- `rule_trigger_enable(trigger_id, enabled)` - Enable/disable without deleting
+- `rule_trigger_history(trigger_id, start_time, end_time)` - View execution history
+- `rule_trigger_delete(trigger_id)` - Remove triggers with cleanup
+
+**Features:**
+- Automatic rule execution on INSERT/UPDATE/DELETE events
+- Full audit trail with OLD/NEW data snapshots
+- Error handling without transaction rollback
+- Performance monitoring (<10ms overhead per trigger)
+- Support for multiple triggers per table/event
+- Trigger enable/disable for maintenance
+
+**Documentation:**
+- RFC-0002 with complete technical design
+- Usage examples in README
+- Comprehensive test suite in `tests/test_event_triggers.sql`
+- Performance benchmarks and best practices
+
+### Changed
+- Updated version to 1.2.0 across all files
+- Enhanced control file description to include event triggers
+- Improved Docker build process (manual installation method)
+
+### Fixed
+- Fixed Rust compilation errors in triggers module (simplified SPI usage)
+- Updated `rule_trigger_history()` to return JSON instead of table type
+- Dockerfile now uses `cargo build` + manual copy (avoids pgrx_embed dependency)
+
 ## [1.1.0] - 2025-12-06
 
 ### Added

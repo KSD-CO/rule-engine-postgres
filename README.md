@@ -1,7 +1,7 @@
 # rule-engine-postgres
 
 [![CI](https://github.com/KSD-CO/rule-engine-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/KSD-CO/rule-engine-postgres/actions)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Production-ready** PostgreSQL extension written in Rust that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) syntax with **forward chaining**, **backward chaining**, and **rule versioning** support.
@@ -21,6 +21,7 @@
 - 🎯 **Backward Chaining**: Goal queries with proof traces ("Can we prove X?")
 - 🔀 **Forward Chaining**: Event-driven rule execution (traditional)
 - 📦 **Rule Repository**: Version control, tagging, and activation management ⭐ NEW
+- 🔔 **Event Triggers**: Automatic rule execution on table changes (INSERT/UPDATE/DELETE) ⭐ NEW
 - 🔒 **Production Ready**: Error codes, health checks, Docker support, CI/CD
 - 📦 **Easy Deploy**: One-liner install or pre-built packages
 - 🔧 **Flexible**: JSON/JSONB support, triggers, nested objects
@@ -198,6 +199,65 @@ SELECT query_backward_chaining_multi(
 )::jsonb;
 
 -- Returns array of results for each goal
+```
+
+### Event Triggers (Automatic Execution) ⭐ NEW
+
+Automatically execute rules when database tables change.
+
+```sql
+-- 1. Create orders table
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    customer_id INT,
+    total_amount NUMERIC(10, 2),
+    discount_amount NUMERIC(10, 2) DEFAULT 0,
+    final_amount NUMERIC(10, 2)
+);
+
+-- 2. Save discount rule
+SELECT rule_save(
+    'order_discount',
+    'rule "VIPDiscount" salience 10 {
+        when Order.total_amount > 100
+        then Order.discount_amount = Order.total_amount * 0.1;
+             Order.final_amount = Order.total_amount - Order.discount_amount;
+    }',
+    '1.0.0',
+    'VIP customer discount',
+    'Initial version'
+);
+
+-- 3. Create trigger to auto-apply discounts on INSERT
+SELECT rule_trigger_create(
+    'order_discount_trigger',
+    'orders',
+    'order_discount',
+    'INSERT'
+);
+
+-- 4. Insert orders - discount applied automatically!
+INSERT INTO orders (customer_id, total_amount)
+VALUES (1, 150.00);
+
+SELECT * FROM orders;
+-- Returns:
+-- id | customer_id | total_amount | discount_amount | final_amount
+--  1 |           1 |       150.00 |           15.00 |       135.00
+
+-- 5. View execution history
+SELECT * FROM rule_trigger_history(1);  -- trigger_id = 1
+
+-- 6. View trigger statistics
+SELECT * FROM rule_trigger_stats;
+
+-- 7. Disable/enable trigger
+SELECT rule_trigger_enable(1, FALSE);  -- Disable
+SELECT rule_trigger_enable(1, TRUE);   -- Re-enable
+
+-- 8. Clean up
+SELECT rule_trigger_delete(1);
+```
 ```
 
 **When to use each mode:**
@@ -393,6 +453,20 @@ The Rule Repository uses 4 tables:
 
 - **`rule_engine_version() → TEXT`**
   Returns extension version ("1.1.0").
+
+### Event Triggers Functions ⭐ NEW
+
+- **`rule_trigger_create(name TEXT, table_name TEXT, rule_name TEXT, event_type TEXT) → INT`**
+  Create trigger to execute rule automatically on INSERT/UPDATE/DELETE. Returns trigger_id.
+
+- **`rule_trigger_enable(trigger_id INT, enabled BOOLEAN) → BOOLEAN`**
+  Enable or disable a trigger. Returns true on success.
+
+- **`rule_trigger_history(trigger_id INT, start_time TIMESTAMP, end_time TIMESTAMP) → JSON`**
+  Get execution history as JSON array. Defaults to last 24 hours.
+
+- **`rule_trigger_delete(trigger_id INT) → BOOLEAN`**
+  Delete a trigger and clean up PostgreSQL trigger.
 
 ### Error Codes
 
