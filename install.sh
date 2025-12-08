@@ -13,7 +13,7 @@ if [ "$EUID" -eq 0 ]; then
 fi
 
 # Allow overriding PostgreSQL version (default 17)
-PG_VERSION=${PG_VERSION:-17}
+PG_VERSION=${PG_VERSION:-16}
 
 echo "Building extension (release mode) for PostgreSQL ${PG_VERSION}..."
 # Use cargo pgrx install for direct installation (package has pgrx_embed issues)
@@ -79,7 +79,21 @@ echo "Restarting PostgreSQL..."
 if [ "$(uname)" = "Darwin" ]; then
     brew services restart postgresql@${PG_VERSION}
 else
-    sudo systemctl restart postgresql@${PG_VERSION} || sudo systemctl restart postgresql
+    # Try common systemd unit names for Debian/Ubuntu packaged clusters
+    if sudo systemctl list-units --full --all | grep -q "postgresql@${PG_VERSION}-main.service"; then
+        sudo systemctl restart postgresql@${PG_VERSION}-main || true
+    elif sudo systemctl list-units --full --all | grep -q "postgresql@${PG_VERSION}.service"; then
+        sudo systemctl restart postgresql@${PG_VERSION} || true
+    elif sudo systemctl list-units --full --all | grep -q "postgresql.service"; then
+        sudo systemctl restart postgresql || true
+    else
+        echo "Warning: no matching postgresql systemd unit found to restart. You may need to restart PostgreSQL manually."
+    fi
+
+    # If restart failed or asserted, show recent journal for debugging
+    echo "If PostgreSQL failed to restart, recent journal entries follow:"
+    sudo journalctl -u postgresql@${PG_VERSION}.service -n 50 --no-pager || true
+    sudo journalctl -u postgresql.service -n 50 --no-pager || true
 fi
 echo ""
 echo "✅ Installation complete!"

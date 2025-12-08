@@ -29,7 +29,60 @@ LANGUAGE C STRICT;
 CREATE OR REPLACE FUNCTION can_prove_goal(facts_json TEXT, rules_grl TEXT, goal TEXT)
 RETURNS BOOLEAN
 AS 'MODULE_PATHNAME', 'can_prove_goal_wrapper'
-LANGUAGE C STRICT;-- Migration: Rule Repository & Versioning
+LANGUAGE C STRICT;
+
+-- Rule Repository API (wrapper functions)
+-- These wrappers call into the extension shared library. Several of them
+-- intentionally do NOT use STRICT because they accept NULL for optional
+-- parameters (mapped to Option<T> in Rust). Do NOT change to LANGUAGE C STRICT
+-- for those functions that accept NULL.
+
+CREATE OR REPLACE FUNCTION rule_save(name TEXT, grl_content TEXT, version TEXT, description TEXT, change_notes TEXT)
+RETURNS INT
+AS 'MODULE_PATHNAME', 'rule_save_wrapper'
+LANGUAGE C;
+
+CREATE OR REPLACE FUNCTION rule_get(name TEXT, version TEXT)
+RETURNS TEXT
+AS 'MODULE_PATHNAME', 'rule_get_wrapper'
+LANGUAGE C;
+
+CREATE OR REPLACE FUNCTION rule_activate(name TEXT, version TEXT)
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'rule_activate_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION rule_delete(name TEXT, version TEXT)
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'rule_delete_wrapper'
+LANGUAGE C;
+
+CREATE OR REPLACE FUNCTION rule_tag_add(name TEXT, tag TEXT)
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'rule_tag_add_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION rule_tag_remove(name TEXT, tag TEXT)
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'rule_tag_remove_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION rule_execute_by_name(name TEXT, facts_json TEXT, version TEXT)
+RETURNS TEXT
+AS 'MODULE_PATHNAME', 'rule_execute_by_name_wrapper'
+LANGUAGE C;
+
+CREATE OR REPLACE FUNCTION rule_query_by_name(name TEXT, facts_json TEXT, goal TEXT, version TEXT)
+RETURNS TEXT
+AS 'MODULE_PATHNAME', 'rule_query_by_name_wrapper'
+LANGUAGE C;
+
+CREATE OR REPLACE FUNCTION rule_can_prove_by_name(name TEXT, facts_json TEXT, goal TEXT, version TEXT)
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'rule_can_prove_by_name_wrapper'
+LANGUAGE C;
+
+-- Migration: Rule Repository & Versioning
 -- RFC-0001: Implement persistent storage for GRL rules with semantic versioning
 -- Author: Rule Engine Team
 -- Date: 2025-12-06
