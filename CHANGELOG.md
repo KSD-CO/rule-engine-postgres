@@ -5,6 +5,91 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-12-09
+
+### Added
+
+#### Phase 2: Developer Experience 🎉
+
+**Testing Framework:**
+- `rule_test_cases` table: Test definitions with assertions
+- `rule_test_results` table: Test execution history
+- `rule_test_coverage` table: Coverage tracking per rule
+- Views: `test_suite_summary`, `recent_test_failures`
+- 7 assertion types: equals, not_equals, exists, not_exists, contains, greater_than, less_than
+- Functions:
+  - `rule_test_create(name, rule, input, expected_output, ...)` - Create test cases
+  - `rule_test_run(test_id)` - Run individual test
+  - `rule_test_run_all(rule_name)` - Batch test execution
+  - `rule_test_coverage(rule_name)` - Get coverage statistics
+
+**Validation & Linting:**
+- Functions:
+  - `rule_validate(grl)` - Syntax validation with detailed errors
+  - `rule_lint(grl, strict_mode)` - Best practices checking
+- Checks: syntax compilation, empty rules, GRL structure, complex conditions (>5 AND operators), deep nesting (>10 levels), unused variables, line length (strict mode), TODO/FIXME comments, salience recommendations
+
+**Debugging Tools:**
+- `rule_debug_traces` table: Execution trace storage
+- Functions:
+  - `rule_debug_execute(facts, rules, session_id)` - Execute with tracing
+  - `rule_trace_get(session_id)` - Retrieve execution traces
+- Features: session-based tracking, before/after state comparison, error tracking
+
+**Rule Templates:**
+- `rule_templates` table: Template definitions
+- `rule_template_instances` table: Instance tracking
+- View: `template_usage_stats`
+- Functions:
+  - `rule_template_create(name, grl_template, params, ...)` - Create templates
+  - `rule_template_instantiate(template_id, param_values)` - Generate rules from templates
+  - `rule_template_list(category)` - List available templates
+  - `rule_template_get(identifier)` - Get specific template
+- 3 built-in templates: threshold_check, tier_assignment, discount_rule
+- Parameter substitution with `{{param}}` syntax
+
+**Extension Files:**
+- `rule_engine_postgre_extensions--1.3.0--1.4.0.sql` - Upgrade script (797 lines)
+- `rule_engine_postgre_extensions--1.4.0.sql` - Base version (2,085 lines)
+- Updated `.control` file to version 1.4.0
+
+**Documentation:**
+- Complete Phase 2 API documentation ([PHASE2_DEVELOPER_EXPERIENCE.md](docs/PHASE2_DEVELOPER_EXPERIENCE.md))
+- Upgrade guide ([UPGRADE_GUIDE.md](UPGRADE_GUIDE.md))
+- Extension versioning guide ([EXTENSION_VERSIONING.md](EXTENSION_VERSIONING.md))
+- Installation guide ([PHASE2_INSTALLATION.md](PHASE2_INSTALLATION.md))
+- Implementation summary ([PHASE2_SUMMARY.md](PHASE2_SUMMARY.md))
+
+### Changed
+- Updated Cargo.toml version to 1.4.0
+- Updated README.md with Phase 2 features
+- Updated ROADMAP.md to mark Phase 2 as complete
+- Updated install.sh to mention Phase 2 tests
+
+### Performance
+- Rule validation: ~0.034ms per validation (100 validations in 3.38ms)
+- Template instantiation: ~0.153ms per instantiation (50 instantiations in 7.67ms)
+- Test execution: 1-5ms depending on rule complexity
+- Debug trace overhead: <1ms
+
+### Migration
+```sql
+-- Upgrade from v1.3.0
+ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.4.0';
+
+-- Or run migration directly
+\i migrations/004_developer_experience.sql
+\i migrations/004_fix.sql
+```
+
+### Backward Compatibility
+✅ Fully backward compatible with v1.3.0
+- All Phase 1 features continue to work
+- No breaking changes
+- Existing rules, tests, and applications unaffected
+
+---
+
 ## [1.3.0] - 2025-12-07
 
 ### Added

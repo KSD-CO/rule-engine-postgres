@@ -1,7 +1,7 @@
 # rule-engine-postgres
 
 [![CI](https://github.com/KSD-CO/rule-engine-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/KSD-CO/rule-engine-postgres/actions)
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Production-ready** PostgreSQL extension written in Rust that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) syntax with **forward chaining**, **backward chaining**, and **rule versioning** support.
@@ -17,15 +17,28 @@
 
 ## Features
 
-- ⚡ **High Performance**: Compiled Rust code, optimized for speed
+### Core Engine
+- ⚡ **High Performance**: Compiled Rust code, optimized for speed (~1000 rules/sec)
 - 🎯 **Backward Chaining**: Goal queries with proof traces ("Can we prove X?")
 - 🔀 **Forward Chaining**: Event-driven rule execution (traditional)
-- 📦 **Rule Repository**: Version control, tagging, and activation management ⭐ NEW
-- 🔔 **Event Triggers**: Automatic rule execution on table changes (INSERT/UPDATE/DELETE) ⭐ NEW
-- 🔒 **Production Ready**: Error codes, health checks, Docker support, CI/CD
-- 📦 **Easy Deploy**: One-liner install or pre-built packages
 - 🔧 **Flexible**: JSON/JSONB support, triggers, nested objects
 - 🛡️ **Type Safe**: Leverages Rust's type system for reliability
+
+### Phase 1: Management & Observability ✅
+- 📦 **Rule Repository**: Version control, tagging, and activation management
+- 🗂️ **Rule Sets**: Group and execute multiple rules together
+- 📊 **Execution Statistics**: Track performance, success rates, and trends
+- 🔔 **Event Triggers**: Automatic rule execution on table changes
+
+### Phase 2: Developer Experience ✅ NEW!
+- 🧪 **Testing Framework**: Create test cases, run tests, track coverage
+- ✅ **Validation & Linting**: Syntax validation, best practices checking
+- 🐛 **Debugging Tools**: Step-by-step execution traces, variable inspection
+- 📋 **Rule Templates**: Reusable templates with parameter substitution
+
+### Production Ready
+- 🔒 **Production Grade**: Error codes, health checks, Docker support, CI/CD
+- 📦 **Easy Deploy**: One-liner install or pre-built packages
 - 📊 **Observable**: Health checks, structured errors, monitoring-ready
 
 ## Quick Start
@@ -75,45 +88,84 @@ cd rule-engine-postgres
 
 ---
 
-## What's New in v1.3.0 ⭐
+## What's New in v1.4.0 ⭐
 
-### Rule Sets (Collections) + Execution Statistics
+### Phase 2: Developer Experience - Testing, Validation, Debugging & Templates
 
-Complete rule organization and performance monitoring!
+Complete developer tooling for building, testing, and maintaining rules!
 
-- **📦 Rule Sets**: Group multiple rules into reusable collections
-  - Execute rules sequentially in defined order
-  - Version control per rule in the set
-  - Easy management: add, remove, reorder rules
-  
-- **📊 Execution Statistics**: Track every rule execution
-  - Success/failure rates with error details
-  - Performance metrics: avg, min, max, p95, p99
-  - Facts modified and rules fired tracking
-  - Time-range queries for trend analysis
+- **🧪 Testing Framework**: Create comprehensive test suites
+  - Create test cases with 7 assertion types
+  - Run individual or batch tests
+  - Track test coverage per rule
+  - View test results history
+
+- **✅ Validation & Linting**: Ensure rule quality
+  - GRL syntax validation before save
+  - Best practices checking
+  - Performance warnings (complex conditions, deep nesting)
+  - Unused variable detection
+
+- **🐛 Debugging Tools**: Debug rule execution
+  - Step-by-step execution traces
+  - Debug session tracking
+  - Variable inspection at each step
+  - Before/after state comparison
+
+- **📋 Rule Templates**: Reusable rule patterns
+  - Parameter substitution with `{{param}}`
+  - Template library (3 built-in templates)
+  - Template categorization and usage tracking
+  - Instant rule generation from templates
 
 ```sql
--- Create a rule set
-SELECT ruleset_create('loan_processing', 'Loan approval workflow');
+-- Create a test case
+SELECT rule_test_create(
+    'test_discount_gold',
+    'discount_rule',
+    '{"customer": {"tier": "gold", "total_spent": 5000}}'::JSONB,
+    '{"customer": {"tier": "gold", "discount": 0.15}}'::JSONB
+);
 
--- Add rules in order
-SELECT ruleset_add_rule(1, 'credit_check', '1.0.0', 0);
-SELECT ruleset_add_rule(1, 'income_verification', '1.0.0', 1);
-SELECT ruleset_add_rule(1, 'debt_ratio', '1.0.0', 2);
+-- Run all tests
+SELECT * FROM rule_test_run_all('discount_rule');
 
--- Execute entire set
-SELECT ruleset_execute(1, '{"applicant": {"credit_score": 750}}');
+-- Validate rule syntax
+SELECT rule_validate('rule MyRule { when x > 10 then y = 20; }');
 
--- Track performance
-SELECT rule_stats('credit_check', NOW() - INTERVAL '7 days', NOW());
-SELECT * FROM rule_performance_summary WHERE rule_name = 'credit_check';
+-- Lint with best practices
+SELECT rule_lint('rule MyRule { ... }', false);
+
+-- Debug execution
+SELECT rule_debug_execute(
+    '{"x": 25}'::JSONB,
+    'rule Test { when x > 10 then y = 20; }',
+    'my_debug_session'
+);
+
+-- List available templates
+SELECT * FROM rule_template_list();
+
+-- Instantiate template
+SELECT rule_template_instantiate(
+    1,  -- template_id
+    '{"field": "temperature", "threshold": "100"}'::JSONB
+);
 ```
 
-**New Functions**: 
-- Rule Sets: `ruleset_create`, `ruleset_add_rule`, `ruleset_execute`, `ruleset_delete`, `ruleset_list`, `ruleset_get_rules`
-- Statistics: `rule_record_execution`, `rule_stats`, `rule_performance_report`, `rule_clear_stats`
+**New Functions**:
+- Testing: `rule_test_create`, `rule_test_run`, `rule_test_run_all`, `rule_test_coverage`
+- Validation: `rule_validate`, `rule_lint`
+- Debugging: `rule_debug_execute`, `rule_trace_get`
+- Templates: `rule_template_create`, `rule_template_instantiate`, `rule_template_list`, `rule_template_get`
 
-**Migration**: Run `migrations/003_rule_sets_and_stats.sql` or upgrade with `ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.3.0';`
+**New Tables**: `rule_test_cases`, `rule_test_results`, `rule_test_coverage`, `rule_debug_traces`, `rule_templates`, `rule_template_instances`
+
+**New Views**: `test_suite_summary`, `recent_test_failures`, `template_usage_stats`
+
+**Migration**: Run `migrations/004_developer_experience.sql` or upgrade with `ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.4.0';`
+
+**Documentation**: See [Phase 2 Documentation](docs/PHASE2_DEVELOPER_EXPERIENCE.md) for complete API reference.
 
 ---
 
@@ -642,7 +694,8 @@ Complete user-friendly documentation:
 Technical documentation in this repo:
 - **[📖 Documentation Index](docs/README.md)** - Complete documentation navigation
 - **[🎯 Backward Chaining Guide](docs/guides/backward-chaining.md)** - Goal-driven reasoning guide
-- **[📦 Rule Repository RFC](docs/rfcs/0001-rule-repository.md)** - Technical design for versioning ⭐ NEW
+- **[📦 Rule Repository RFC](docs/rfcs/0001-rule-repository.md)** - Technical design for versioning
+- **[🧪 Phase 2: Developer Experience](docs/PHASE2_DEVELOPER_EXPERIENCE.md)** - Testing, validation, debugging, templates ⭐ NEW
 - **[💡 Use Case Examples](docs/examples/use-cases.md)** - Real-world production examples
 - **[🔧 API Reference](docs/api-reference.md)** - Complete function reference
 - **[🔗 Integration Patterns](docs/integration-patterns.md)** - Triggers, JSONB, performance tips
@@ -650,6 +703,7 @@ Technical documentation in this repo:
 - **[🔨 Build from Source](docs/deployment/build-from-source.md)** - Manual build instructions
 - **[🐛 Troubleshooting](docs/development/TROUBLESHOOTING.md)** - Common build issues and fixes
 - **[📦 Distribution Guide](docs/deployment/distribution.md)** - Package distribution
+- **[🗺️ Product Roadmap](docs/ROADMAP.md)** - Feature roadmap and future plans
 
 ---
 
@@ -775,66 +829,7 @@ src/
 
 ---
 
-**Version**: 1.2.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
-
----
-
-## What's New in v1.3.0 ⭐
-
-### Rule Sets & Execution Statistics
-
-Enterprise-grade rule management with collections and comprehensive monitoring!
-
-#### Rule Sets (Collections)
-Group multiple rules into reusable, ordered collections that execute sequentially:
-
-- **📦 Rule Grouping**: Combine related rules into named collections
-- **🔢 Execution Order**: Control rule sequence with ordering
-- **🔄 Sequential Execution**: Chain rules where output becomes next input
-- **✅ Easy Management**: Add/remove rules without modifying code
-
-```sql
--- Create a loan approval rule set
-SELECT ruleset_create('loan_approval', 'Complete loan approval workflow');
-
--- Add rules in specific order
-SELECT ruleset_add_rule(1, 'credit_check', '1.0.0', 0);
-SELECT ruleset_add_rule(1, 'income_verification', '1.0.0', 1);
-SELECT ruleset_add_rule(1, 'debt_ratio', '1.0.0', 2);
-
--- Execute entire workflow with one call
-SELECT ruleset_execute(1, '{"CreditScore": 750, "Income": 60000}');
-```
-
-#### Execution Statistics
-Track and analyze rule performance in production:
-
-- **📊 Comprehensive Metrics**: Count, duration, success rate, percentiles (p50/p95/p99)
-- **📈 Performance Trends**: Track execution patterns over time
-- **🎯 Success Tracking**: Monitor failure rates and error messages
-- **🔍 Detailed Analysis**: Facts modified, rules fired per execution
-- **📉 Performance Reports**: Identify slow or frequently-used rules
-
-```sql
--- Record execution
-SELECT rule_record_execution('pricing_rule', '1.0.0', 42.5, true, NULL, 3, 5);
-
--- Get detailed statistics
-SELECT rule_stats('pricing_rule', NOW() - INTERVAL '7 days', NOW());
--- Returns: {"total_executions": 150, "success_rate": 98.5, "avg_ms": 38.2, ...}
-
--- Performance report for all rules
-SELECT * FROM rule_performance_report(50, 'total_executions');
-
--- Monitor with aggregated view
-SELECT * FROM rule_performance_summary WHERE rule_name = 'pricing_rule';
-```
-
-**New Functions**: 
-- Rule Sets: `ruleset_create`, `ruleset_add_rule`, `ruleset_remove_rule`, `ruleset_execute`, `ruleset_delete`
-- Statistics: `rule_record_execution`, `rule_stats`, `rule_performance_report`, `rule_clear_stats`
-
-**Migration**: Run `migrations/003_rule_sets_and_stats.sql` or upgrade with `ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.3.0';`
+**Version**: 1.4.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
 
 ---
 
