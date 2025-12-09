@@ -94,7 +94,7 @@ pub fn rule_save(
             .map(|d| dollar_quote(d))
             .unwrap_or_else(|| "NULL".to_string());
 
-        let new_id_opt: Option<i32> = Spi::connect(|client| {
+        let new_id: i32 = Spi::connect(|client| {
             // desc_sql is already either NULL or a dollar-quoted literal; build query string
             let q = format!(
                 "INSERT INTO rule_definitions (name, description, created_by, updated_by, is_active) VALUES ($1, {} , $2, $3, true) RETURNING id",
@@ -112,10 +112,8 @@ pub fn rule_save(
                 )?
                 .first()
                 .get_one::<i32>()
-        })?;
-
-        let new_id = new_id_opt
-            .ok_or_else(|| RuleEngineError::DatabaseError("Failed to insert rule".to_string()))?;
+        })?
+        .ok_or_else(|| RuleEngineError::DatabaseError("Failed to insert rule".to_string()))?;
         new_id
     };
 
@@ -181,10 +179,6 @@ pub fn rule_save(
     })?;
 
     // Insert new version (first version is automatically default)
-    let change_notes_sql = change_notes
-        .as_ref()
-        .map(|c| dollar_quote(c))
-        .unwrap_or_else(|| "NULL".to_string());
 
     // Use parameterized insert: pass grl_content and change_notes as parameters
     Spi::connect(|client| -> Result<Option<i64>, pgrx::spi::SpiError> {
@@ -231,18 +225,7 @@ fn dollar_quote(s: &str) -> String {
     }
 }
 
-// Return a SQL literal for an Option<&str>: either NULL or a dollar-quoted literal
-fn sql_literal_opt(opt: &Option<String>) -> String {
-    match opt {
-        Some(s) => dollar_quote(s),
-        None => "NULL".to_string(),
-    }
-}
-
-// Escape single quotes for short identifiers to be embedded in single-quoted SQL
-fn escape_single_quotes(s: &str) -> String {
-    s.replace("'", "''")
-}
+// (Unused helpers removed per user request)
 
 /// Get GRL content for a rule
 ///

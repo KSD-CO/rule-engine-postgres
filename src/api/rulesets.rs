@@ -23,7 +23,12 @@ fn ruleset_create(
             .select(
                 "SELECT ruleset_create($1, $2)",
                 None,
-                &[name.into(), description.into()],
+                &[
+                    name.into(),
+                    description
+                        .map(|d| d.into())
+                        .unwrap_or_else(|| Option::<String>::None.into()),
+                ],
             )?
             .first()
             .get_one::<i32>()
@@ -62,7 +67,9 @@ fn ruleset_add_rule(
                 &[
                     ruleset_id.into(),
                     rule_name.into(),
-                    rule_version.into(),
+                    rule_version
+                        .map(|v| v.into())
+                        .unwrap_or_else(|| Option::<String>::None.into()),
                     order.into(),
                 ],
             )?
@@ -97,7 +104,13 @@ fn ruleset_remove_rule(
             .select(
                 "SELECT ruleset_remove_rule($1, $2, $3)",
                 None,
-                &[ruleset_id.into(), rule_name.into(), rule_version.into()],
+                &[
+                    ruleset_id.into(),
+                    rule_name.into(),
+                    rule_version
+                        .map(|v| v.into())
+                        .unwrap_or_else(|| Option::<String>::None.into()),
+                ],
             )?
             .first()
             .get_one::<bool>()

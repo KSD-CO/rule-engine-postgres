@@ -24,21 +24,22 @@ CREATE TABLE IF NOT EXISTS test_orders (
 );
 
 -- Create test rule for order discounts
-INSERT INTO rule_definitions (name, content_json, version)
-VALUES (
+-- Create test rule for order discounts using rule repository API
+SELECT rule_save(
     'test_order_discount',
-    '{
-        "name": "test_order_discount",
-        "description": "Apply 10% discount for orders over $100",
-        "salience": 100,
-        "when": "total_amount > 100",
-        "then": [
-            "discount_amount = total_amount * 0.1",
-            "final_amount = total_amount - discount_amount"
-        ]
-    }'::JSONB,
-    1
-) ON CONFLICT (name, version) DO NOTHING;
+    $$
+rule "TestOrderDiscount" salience 100 {
+    when
+        Order.total_amount > 100
+    then
+        Order.discount_amount = Order.total_amount * 0.1;
+        Order.final_amount = Order.total_amount - Order.discount_amount;
+}
+$$,
+    '1.0.0',
+    'Apply 10% discount for orders over $100',
+    'Test rule for event trigger suite'
+);
 
 \echo '✓ Test tables and rules created'
 
@@ -137,17 +138,23 @@ SELECT
 FROM rule_trigger_history
 WHERE trigger_id = :trigger_id;
 
--- View detailed history
-SELECT * FROM rule_trigger_history(:trigger_id);
+-- View detailed history (query table directly to avoid wrapper return-type mismatch)
+SELECT * FROM rule_trigger_history rth
+WHERE rth.trigger_id = :trigger_id
+ORDER BY rth.executed_at;
 
 \echo '✓ History records:'
 SELECT 
-    event_type,
-    success,
-    execution_time_ms,
-    result_summary
-FROM rule_trigger_history(:trigger_id)
-ORDER BY executed_at;
+    rth.event_type,
+    rth.success,
+    rth.execution_time_ms,
+    CASE
+        WHEN rth.result_data IS NOT NULL THEN substring(rth.result_data::TEXT, 1, 100)
+        ELSE NULL
+    END AS result_summary
+FROM rule_trigger_history rth
+WHERE rth.trigger_id = :trigger_id
+ORDER BY rth.executed_at;
 
 -- ============================================================================
 -- TEST 4: Trigger Stats View

@@ -19,10 +19,14 @@ fn rule_record_execution(
                 None,
                 &[
                     rule_name.into(),
-                    rule_version.into(),
+                    rule_version
+                        .map(|v| v.into())
+                        .unwrap_or_else(|| Option::<String>::None.into()),
                     execution_time_ms.into(),
                     success.into(),
-                    error_message.into(),
+                    error_message
+                        .map(|e| e.into())
+                        .unwrap_or_else(|| Option::<String>::None.into()),
                     facts_modified.into(),
                     rules_fired.into(),
                 ],
