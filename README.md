@@ -151,15 +151,17 @@ SELECT rule_execute_by_name(
 -- Returns: {"User": {"age": 30, "status": "adult"}}
 ```
 
-**Option 2: Inline Rules (Legacy)**
+**Option 2: Inline Rules (Ad-hoc)**
+
+Inline (ad-hoc) rules are a fine option when you don't want to persist rules in the repository — for quick tests or one-off executions. For production use, prefer stored rules (see Option 1).
 
 ```sql
 SELECT run_rule_engine(
-    '{"User": {"age": 30, "status": "active"}}',
-    'rule "CheckAge" salience 10 {
-        when User.age > 18
-        then User.status = "adult";
-    }'
+  '{"User": {"age": 30, "status": "active"}}',
+  'rule "CheckAge" salience 10 {
+    when User.age > 18
+    then User.status = "adult";
+  }'
 );
 -- Returns: {"User": {"age": 30, "status": "adult"}}
 ```
@@ -202,18 +204,20 @@ SELECT rule_can_prove_by_name(
 -- Returns: true
 ```
 
-**Option 2: Inline Rules (Legacy)**
+**Option 2: Inline Rules (Ad-hoc)**
+
+Inline (ad-hoc) rules are useful for quick checks or one-off queries when you don't want to persist rules in the repository. For production or repeated logic, use stored rules (Option 1).
 
 ```sql
 -- Simple goal query
 SELECT query_backward_chaining(
-    '{"User": {"Age": 25}}',
-    'rule "AgeCheck" {
-        when User.Age >= 18
-        then User.IsAdult = true;
-    }',
-    'User.IsAdult == true'
-)::jsonb;
+  '{"User": {"Age": 25}}',
+  'rule "AgeCheck" {
+    when User.Age >= 18
+    then User.IsAdult = true;
+  }',
+  'User.IsAdult == true'
+ )::jsonb;
 
 -- Returns:
 -- {
@@ -226,19 +230,19 @@ SELECT query_backward_chaining(
 
 -- Fast boolean check (production mode)
 SELECT can_prove_goal(
-    '{"Order": {"Total": 100}}',
-    'rule "Valid" { when Order.Total > 0 then Order.Valid = true; }',
-    'Order.Valid == true'
+  '{"Order": {"Total": 100}}',
+  'rule "Valid" { when Order.Total > 0 then Order.Valid = true; }',
+  'Order.Valid == true'
 );
 -- Returns: true
 
 -- Multiple goals in one query
 SELECT query_backward_chaining_multi(
-    '{"User": {"Age": 25}}',
-    'rule "Vote" { when User.Age >= 18 then User.CanVote = true; }
-     rule "Retire" { when User.Age >= 65 then User.CanRetire = true; }',
-    ARRAY['User.CanVote == true', 'User.CanRetire == true']
-)::jsonb;
+  '{"User": {"Age": 25}}',
+  'rule "Vote" { when User.Age >= 18 then User.CanVote = true; }
+   rule "Retire" { when User.Age >= 65 then User.CanRetire = true; }',
+  ARRAY['User.CanVote == true', 'User.CanRetire == true']
+ )::jsonb;
 
 -- Returns array of results for each goal
 ```
