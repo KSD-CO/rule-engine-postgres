@@ -18,15 +18,16 @@ fn ruleset_create(
     name: &str,
     description: Option<&str>,
 ) -> Result<i32, Box<dyn std::error::Error>> {
-    let query = format!(
-        "SELECT ruleset_create('{}', {})",
-        name.replace("'", "''"),
-        description
-            .map(|d| format!("'{}'", d.replace("'", "''")))
-            .unwrap_or_else(|| "NULL".to_string())
-    );
-
-    let result = Spi::get_one::<i32>(&query)?;
+    let result: Option<i32> = Spi::connect(|client| {
+        client
+            .select(
+                "SELECT ruleset_create($1, $2)",
+                None,
+                &[name.into(), description.into()],
+            )?
+            .first()
+            .get_one::<i32>()
+    })?;
     result.ok_or_else(|| "Failed to create rule set".into())
 }
 
@@ -53,17 +54,16 @@ fn ruleset_add_rule(
     rule_version: Option<&str>,
     order: default!(i32, 0),
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    let query = format!(
-        "SELECT ruleset_add_rule({}, '{}', {}, {})",
-        ruleset_id,
-        rule_name.replace("'", "''"),
-        rule_version
-            .map(|v| format!("'{}'", v.replace("'", "''")))
-            .unwrap_or_else(|| "NULL".to_string()),
-        order
-    );
-
-    let result = Spi::get_one::<bool>(&query)?;
+    let result: Option<bool> = Spi::connect(|client| {
+        client
+            .select(
+                "SELECT ruleset_add_rule($1, $2, $3, $4)",
+                None,
+                &[ruleset_id.into(), rule_name.into(), rule_version.into(), order.into()],
+            )?
+            .first()
+            .get_one::<bool>()
+    })?;
     result.ok_or_else(|| "Failed to add rule to rule set".into())
 }
 
@@ -87,16 +87,16 @@ fn ruleset_remove_rule(
     rule_name: &str,
     rule_version: Option<&str>,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    let query = format!(
-        "SELECT ruleset_remove_rule({}, '{}', {})",
-        ruleset_id,
-        rule_name.replace("'", "''"),
-        rule_version
-            .map(|v| format!("'{}'", v.replace("'", "''")))
-            .unwrap_or_else(|| "NULL".to_string())
-    );
-
-    let result = Spi::get_one::<bool>(&query)?;
+    let result: Option<bool> = Spi::connect(|client| {
+        client
+            .select(
+                "SELECT ruleset_remove_rule($1, $2, $3)",
+                None,
+                &[ruleset_id.into(), rule_name.into(), rule_version.into()],
+            )?
+            .first()
+            .get_one::<bool>()
+    })?;
     Ok(result.unwrap_or(false))
 }
 
@@ -118,13 +118,16 @@ fn ruleset_execute(
     ruleset_id: i32,
     facts_json: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let query = format!(
-        "SELECT ruleset_execute({}, '{}')",
-        ruleset_id,
-        facts_json.replace("'", "''")
-    );
-
-    let result = Spi::get_one::<String>(&query)?;
+    let result: Option<String> = Spi::connect(|client| {
+        client
+            .select(
+                "SELECT ruleset_execute($1, $2)",
+                None,
+                &[ruleset_id.into(), facts_json.into()],
+            )?
+            .first()
+            .get_one::<String>()
+    })?;
     result.ok_or_else(|| "Failed to execute rule set".into())
 }
 
@@ -142,7 +145,11 @@ fn ruleset_execute(
 /// ```
 #[pg_extern]
 fn ruleset_delete(ruleset_id: i32) -> Result<bool, Box<dyn std::error::Error>> {
-    let query = format!("SELECT ruleset_delete({})", ruleset_id);
-    let result = Spi::get_one::<bool>(&query)?;
+    let result: Option<bool> = Spi::connect(|client| {
+        client
+            .select("SELECT ruleset_delete($1)", None, &[ruleset_id.into()])?
+            .first()
+            .get_one::<bool>()
+    })?;
     Ok(result.unwrap_or(false))
 }

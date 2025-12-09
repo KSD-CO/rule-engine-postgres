@@ -155,7 +155,12 @@ COMMENT ON TABLE rule_tags IS 'Tags for organizing and filtering rules';
 -- Audit log for compliance and debugging
 CREATE TABLE IF NOT EXISTS rule_audit_log (
     id BIGSERIAL PRIMARY KEY,
-    rule_id INTEGER NOT NULL REFERENCES rule_definitions(id) ON DELETE CASCADE,
+    -- Store rule_id for audit purposes. We intentionally do NOT enforce a
+    -- foreign key constraint here because audit records must remain even if
+    -- the referenced rule is deleted. Keeping a strict FK caused a failure
+    -- when the audit trigger attempted to insert after the rule row was
+    -- removed.
+    rule_id INTEGER NOT NULL,
     action TEXT NOT NULL,
     version_before TEXT,
     version_after TEXT,
@@ -946,11 +951,19 @@ BEGIN
         END IF;
     END IF;
 
-    -- Insert or update rule set member
-    INSERT INTO rule_set_members (ruleset_id, rule_name, rule_version, execution_order)
-    VALUES (p_ruleset_id, p_rule_name, p_rule_version, p_order)
-    ON CONFLICT (ruleset_id, rule_name, COALESCE(rule_version, 'default'))
-    DO UPDATE SET execution_order = p_order;
+        -- Insert or update rule set member
+        -- Older PostgreSQL versions do not accept expressions in ON CONFLICT, so
+        -- do an UPDATE first and then INSERT if no row updated.
+        UPDATE rule_set_members
+        SET execution_order = p_order, added_at = CURRENT_TIMESTAMP, added_by = CURRENT_USER
+        WHERE ruleset_id = p_ruleset_id
+            AND rule_name = p_rule_name
+            AND ( (rule_version IS NULL AND p_rule_version IS NULL) OR rule_version = p_rule_version );
+
+        IF NOT FOUND THEN
+                INSERT INTO rule_set_members (ruleset_id, rule_name, rule_version, execution_order)
+                VALUES (p_ruleset_id, p_rule_name, p_rule_version, p_order);
+        END IF;
 
     RETURN true;
 END;

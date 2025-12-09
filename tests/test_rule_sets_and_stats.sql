@@ -229,15 +229,26 @@ SELECT COUNT(*) as should_be_zero FROM rule_set_members WHERE ruleset_id = :temp
 
 -- Try to create duplicate rule set (should fail)
 \echo 'Attempting to create duplicate rule set (should fail):'
-SELECT ruleset_create('test_loan_approval', 'Duplicate') AS should_fail;
+DO $$
+BEGIN
+    PERFORM ruleset_create('test_loan_approval', 'Duplicate');
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'Expected failure: %', SQLERRM;
+END $$;
 
 -- Try to add non-existent rule (should fail)
 \echo 'Attempting to add non-existent rule (should fail):'
-SELECT ruleset_add_rule(:ruleset_id, 'nonexistent_rule', NULL, 0) AS should_fail;
+SELECT 'DO $$ BEGIN PERFORM ruleset_add_rule(' || :ruleset_id || ', ''nonexistent_rule'', NULL, 0); EXCEPTION WHEN OTHERS THEN RAISE NOTICE ''Expected failure: %'', SQLERRM; END $$;' ;
+\gexec
 
 -- Try to execute non-existent rule set (should fail)
 \echo 'Attempting to execute non-existent rule set (should fail):'
-SELECT ruleset_execute(99999, '{}') AS should_fail;
+DO $$
+BEGIN
+    PERFORM ruleset_execute(99999, '{}');
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'Expected failure: %', SQLERRM;
+END $$;
 
 -- ============================================================================
 -- TEST 14: Complex Rule Set Execution

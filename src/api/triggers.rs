@@ -32,13 +32,16 @@ fn rule_trigger_create(
     rule_name: &str,
     event_type: &str,
 ) -> Result<i32, Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let result = Spi::get_one::<i32>(&format!(
-        "SELECT rule_trigger_create('{}', '{}', '{}', '{}')",
-        name.replace("'", "''"),
-        table_name.replace("'", "''"),
-        rule_name.replace("'", "''"),
-        event_type.replace("'", "''")
-    ))?;
+    let result: Option<i32> = Spi::connect(|client| {
+        client
+            .select(
+                "SELECT rule_trigger_create($1, $2, $3, $4)",
+                None,
+                &[name.into(), table_name.into(), rule_name.into(), event_type.into()],
+            )?
+            .first()
+            .get_one::<i32>()
+    })?;
 
     result.ok_or_else(|| "Failed to create trigger".into())
 }
@@ -68,10 +71,16 @@ fn rule_trigger_enable(
     trigger_id: i32,
     enabled: default!(bool, true),
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let result = Spi::get_one::<bool>(&format!(
-        "SELECT rule_trigger_enable({}, {})",
-        trigger_id, enabled
-    ))?;
+    let result: Option<bool> = Spi::connect(|client| {
+        client
+            .select(
+                "SELECT rule_trigger_enable($1, $2)",
+                None,
+                &[trigger_id.into(), enabled.into()],
+            )?
+            .first()
+            .get_one::<bool>()
+    })?;
 
     result.ok_or_else(|| "Failed to enable/disable trigger".into())
 }
@@ -114,12 +123,16 @@ fn rule_trigger_history(
         None => "NOW()".to_string(),
     };
 
-    let query = format!(
-        "SELECT json_agg(row_to_json(t)) FROM rule_trigger_history({}, {}, {}) t",
-        trigger_id, start_clause, end_clause
-    );
-
-    let result = Spi::get_one::<String>(&query)?;
+    let result: Option<String> = Spi::connect(|client| {
+        client
+            .select(
+                "SELECT json_agg(row_to_json(t)) FROM rule_trigger_history($1, $2, $3) t",
+                None,
+                &[trigger_id.into(), start_clause.into(), end_clause.into()],
+            )?
+            .first()
+            .get_one::<String>()
+    })?;
 
     Ok(result.unwrap_or_else(|| "[]".to_string()))
 }
@@ -143,7 +156,12 @@ fn rule_trigger_history(
 fn rule_trigger_delete(
     trigger_id: i32,
 ) -> Result<bool, Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let result = Spi::get_one::<bool>(&format!("SELECT rule_trigger_delete({})", trigger_id))?;
+    let result: Option<bool> = Spi::connect(|client| {
+        client
+            .select("SELECT rule_trigger_delete($1)", None, &[trigger_id.into()])?
+            .first()
+            .get_one::<bool>()
+    })?;
 
     result.ok_or_else(|| "Failed to delete trigger".into())
 }
