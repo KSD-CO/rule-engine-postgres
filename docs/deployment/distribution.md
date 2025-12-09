@@ -22,17 +22,20 @@ pgxn bundle
 
 # 4. Upload to PGXN
 pgxn release rule_engine_postgre_extensions-1.0.0.zip
-```
+docker build -t jamesvu/rule-engine-postgres:1.0.0 .
 
 #### Users Install from PGXN
-
+docker tag jamesvu/rule-engine-postgres:1.0.0 jamesvu/rule-engine-postgres:latest
 ```bash
 # Install pgxn client
-sudo apt-get install pgxnclient
+docker push jamesvu/rule-engine-postgres:1.0.0
 
+docker push jamesvu/rule-engine-postgres:latest
 # Install extension
 pgxn install rule_engine_postgre_extensions
+docker pull jamesvu/rule-engine-postgres:1.0.0
 
+docker run -d -p 5432:5432 jamesvu/rule-engine-postgres:1.0.0
 # Enable in PostgreSQL
 psql -d mydb -c "CREATE EXTENSION rule_engine_postgre_extensions;"
 ```
@@ -40,47 +43,41 @@ psql -d mydb -c "CREATE EXTENSION rule_engine_postgre_extensions;"
 ---
 
 ### 2. Pre-built Binary Packages
-
+    image: jamesvu/rule-engine-postgres:1.0.0
 #### Build .deb Package (Debian/Ubuntu)
 
 ```bash
 # Build package
-./build-deb.sh
-
 # Output: postgresql-16-rule-engine_1.0.0_amd64.deb
-```
-
 #### Distribute via GitHub Releases
+```bash
+# Build image
+docker build -t jamesvu/rule-engine-postgres:1.0.0 .
 
-1. **Create Release on GitHub**:
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
+# Tag as latest
+docker tag jamesvu/rule-engine-postgres:1.0.0 jamesvu/rule-engine-postgres:latest
 
-2. **Upload .deb to GitHub Releases**:
-   - Go to https://github.com/KSD-CO/rule-engine-postgres/releases
-   - Create new release
-   - Upload `.deb` file
+# Push to Docker Hub
+docker push jamesvu/rule-engine-postgres:1.0.0
+docker push jamesvu/rule-engine-postgres:latest
 
-3. **Users install**:
-   ```bash
-   wget https://github.com/KSD-CO/rule-engine-postgres/releases/download/v1.0.0/postgresql-16-rule-engine_1.0.0_amd64.deb
-   sudo dpkg -i postgresql-16-rule-engine_1.0.0_amd64.deb
-   ```
+**Users install**:
 
-#### Build RPM Package (RHEL/CentOS)
-
-Create `rule-engine.spec`:
-
-```spec
-Name:           postgresql16-rule-engine
-Version:        1.0.0
-Release:        1%{?dist}
-Summary:        PostgreSQL extension for rule engine with GRL syntax
-
+```bash
+# Pull and run
 License:        MIT
 URL:            https://github.com/KSD-CO/rule-engine-postgres
+```
+
+Or via docker-compose:
+
+```yaml
+services:
+  postgres:
+    image: jamesvu/rule-engine-postgres:1.0.0
+    environment:
+      POSTGRES_PASSWORD: postgres
+```
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  postgresql16-devel
@@ -88,13 +85,13 @@ BuildRequires:  cargo
 BuildRequires:  rust >= 1.75
 
 %description
-Production-ready PostgreSQL extension for running business rules.
+docker build -t jamesvu/rule-engine-postgres:1.1.0 .
 
 %build
 cargo build --release --features pg16
 
 %install
-mkdir -p %{buildroot}/usr/pgsql-16/lib
+docker push jamesvu/rule-engine-postgres:1.1.0
 mkdir -p %{buildroot}/usr/pgsql-16/share/extension
 cp target/release/librule_engine_postgre_extensions.so %{buildroot}/usr/pgsql-16/lib/
 cp *.control %{buildroot}/usr/pgsql-16/share/extension/
@@ -118,23 +115,52 @@ rpmbuild -ba rule-engine.spec
 
 ```bash
 # Build image
-docker build -t KSD-CO/rule-engine-postgres:1.0.0 .
+docker tag jamesvu/rule-engine-postgres:1.0.0 jamesvu/rule-engine-postgres:latest
+docker build -t jamesvu/rule-engine-postgres:1.0.0 .
 
 # Tag as latest
-docker tag KSD-CO/rule-engine-postgres:1.0.0 KSD-CO/rule-engine-postgres:latest
+docker tag jamesvu/rule-engine-postgres:1.0.0 jamesvu/rule-engine-postgres:latest
 
 # Push to Docker Hub
-docker login
-docker push KSD-CO/rule-engine-postgres:1.0.0
-docker push KSD-CO/rule-engine-postgres:latest
+
+docker pull jamesvu/rule-engine-postgres:1.0.0
+
+Or via docker-compose:
+
 ```
+docker build -t jamesvu/rule-engine-postgres:1.0.0 .
+### 3. Docker Hub
+
+We publish Docker images to Docker Hub. The GitHub Actions `release` workflow now pushes images to Docker Hub using repository secrets.
+docker push jamesvu/rule-engine-postgres:1.1.0
+Local publish example:
+
+```bash
+# Build image
+# Generate Packages file
+
+# Tag as latest
+cd apt-repo
+
+# Push to Docker Hub
+dpkg-scanpackages pool /dev/null | gzip -9c > dists/stable/main/binary-amd64/Packages.gz
+
+# Upload to server (e.g., GitHub Pages, S3, etc.)
+```
+
+CI / GitHub Actions notes
+
+- The release workflow (`.github/workflows/release.yml`) builds and pushes images to Docker Hub.
+- You must set the following repository secrets in GitHub for the push step to work:
+  - `DOCKERHUB_USERNAME` — Docker Hub username or organization name
+  - `DOCKERHUB_TOKEN` — Docker Hub personal access token (recommended) or password
 
 **Users install**:
 
 ```bash
 # Pull and run
-docker pull KSD-CO/rule-engine-postgres:1.0.0
-docker run -d -p 5432:5432 KSD-CO/rule-engine-postgres:1.0.0
+```
+
 ```
 
 Or via docker-compose:
@@ -142,29 +168,10 @@ Or via docker-compose:
 ```yaml
 services:
   postgres:
-    image: KSD-CO/rule-engine-postgres:1.0.0
+  image: jamesvu/rule-engine-postgres:1.0.0
     environment:
       POSTGRES_PASSWORD: postgres
 ```
-
----
-
-### 4. APT Repository (Advanced)
-
-**Host your own APT repository**:
-
-```bash
-# Create repository structure
-mkdir -p apt-repo/pool/main
-cp postgresql-16-rule-engine_1.0.0_amd64.deb apt-repo/pool/main/
-
-# Generate Packages file
-cd apt-repo
-dpkg-scanpackages pool /dev/null | gzip -9c > dists/stable/main/binary-amd64/Packages.gz
-
-# Upload to server (e.g., GitHub Pages, S3, etc.)
-```
-
 **Users add repository**:
 
 ```bash
@@ -295,13 +302,13 @@ When releasing new version:
 
 # 2. Build packages
 ./build-deb.sh
-docker build -t KSD-CO/rule-engine-postgres:1.1.0 .
+docker build -t jamesvu/rule-engine-postgres:1.1.0 .
 
 # 3. Publish
 git tag v1.1.0
 git push origin v1.1.0
 pgxn release rule_engine_postgre_extensions-1.1.0.zip
-docker push KSD-CO/rule-engine-postgres:1.1.0
+docker push jamesvu/rule-engine-postgres:1.1.0
 ```
 
 ### Support Multiple PostgreSQL Versions

@@ -26,14 +26,24 @@ PG_VERSION=$(psql --version 2>/dev/null | grep -oP '\d+' | head -1 || echo "16")
 echo "Detected: $OS $VERSION with PostgreSQL $PG_VERSION"
 echo ""
 
+# GitHub repository owner and name (can be overridden via env vars)
+GITHUB_OWNER=${GITHUB_OWNER:-KSD-CO}
+GITHUB_REPO=${GITHUB_REPO:-rule-engine-postgres}
+
+# verify required tools
+if ! command -v curl >/dev/null 2>&1; then
+    echo "❌ 'curl' is required but not installed. Please install curl and retry."
+    exit 1
+fi
+
 # Get latest release version from GitHub API
-LATEST_VERSION=$(curl -fsSL https://api.github.com/repos/KSD-CO/rule-engine-postgres/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/' || echo "1.1.0")
+LATEST_VERSION=$(curl -fsSL "https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^\"]+)".*/\1/' || echo "1.1.0")
 
 echo "Latest version: v${LATEST_VERSION}"
 echo ""
 
 # Check if pre-built binary exists
-BINARY_URL="https://github.com/KSD-CO/rule-engine-postgres/releases/download/v${LATEST_VERSION}/postgresql-${PG_VERSION}-rule-engine_${LATEST_VERSION}_amd64.deb"
+BINARY_URL="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/v${LATEST_VERSION}/postgresql-${PG_VERSION}-rule-engine_${LATEST_VERSION}_amd64.deb"
 
 if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
     echo "📦 Downloading pre-built package..."
@@ -63,7 +73,7 @@ if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
         cargo install cargo-pgrx --version 0.16.1 --locked
 
         # Clone and build
-        git clone https://github.com/KSD-CO/rule-engine-postgres.git /tmp/rule-engine
+    git clone "https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git" /tmp/rule-engine
         cd /tmp/rule-engine
         
         # Build with cargo pgrx package

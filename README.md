@@ -54,17 +54,13 @@ sudo dpkg -i postgresql-16-rule-engine_1.0.0_amd64.deb
 pgxn install rule_engine_postgre_extensions
 ```
 
+docker-compose exec postgres psql -U postgres -d ruleengine \
 ### Option 3: Docker
 
 ```bash
-git clone https://github.com/KSD-CO/rule-engine-postgres.git
-cd rule-engine-postgres
-cp .env.example .env
-docker-compose up -d
-
-# Verify
-docker-compose exec postgres psql -U postgres -d ruleengine \
-  -c "SELECT rule_engine_health_check();"
+docker pull jamesvu/rule-engine-postgres:latest
+docker run -d -p 5432:5432 --name rule-engine-postgres \ 
+  -e POSTGRES_PASSWORD=postgres jamesvu/rule-engine-postgres:latest
 ```
 
 ### Option 4: Build from Source

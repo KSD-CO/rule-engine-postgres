@@ -2,21 +2,24 @@ version: '3.8'
 
 services:
   postgres:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # By default we pull the published Docker Hub image. Override with IMAGE_NAME env var if you want to use a different image.
+    image: "${IMAGE_NAME:-jamesvu/rule-engine-postgres:latest}"
+    # If you prefer to build locally instead of pulling, uncomment the build block below:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: rule-engine-postgres
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-ruleengine}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ruleengine}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./tests.sql:/docker-entrypoint-initdb.d/02-tests.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,8 +31,8 @@ services:
     image: dpage/pgadmin4:latest
     container_name: rule-engine-pgadmin
     environment:
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@admin.com}
-      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
       - "${PGADMIN_PORT:-5050}:80"
     volumes:
