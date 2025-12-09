@@ -37,7 +37,12 @@ fn rule_trigger_create(
             .select(
                 "SELECT rule_trigger_create($1, $2, $3, $4)",
                 None,
-                &[name.into(), table_name.into(), rule_name.into(), event_type.into()],
+                &[
+                    name.into(),
+                    table_name.into(),
+                    rule_name.into(),
+                    event_type.into(),
+                ],
             )?
             .first()
             .get_one::<i32>()

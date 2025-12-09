@@ -20,7 +20,11 @@ pub fn test_spi_simple() -> Result<String, Box<dyn std::error::Error>> {
     // Step 3: Check if rule exists (parameterized)
     let rule_id_opt: Option<i32> = Spi::connect(|client| {
         client
-            .select("SELECT id FROM rule_definitions WHERE name = $1", None, &[name.into()])?
+            .select(
+                "SELECT id FROM rule_definitions WHERE name = $1",
+                None,
+                &[name.into()],
+            )?
             .first()
             .get_one::<i32>()
     })?;

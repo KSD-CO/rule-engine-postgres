@@ -59,7 +59,12 @@ fn ruleset_add_rule(
             .select(
                 "SELECT ruleset_add_rule($1, $2, $3, $4)",
                 None,
-                &[ruleset_id.into(), rule_name.into(), rule_version.into(), order.into()],
+                &[
+                    ruleset_id.into(),
+                    rule_name.into(),
+                    rule_version.into(),
+                    order.into(),
+                ],
             )?
             .first()
             .get_one::<bool>()

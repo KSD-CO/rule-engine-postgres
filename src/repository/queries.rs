@@ -62,7 +62,7 @@ pub fn rule_save(
 
     let rule_id = if rule_exists {
         // Rule exists - get ID and update metadata
-    let id_opt: Option<i32> = Spi::connect(|client| {
+        let id_opt: Option<i32> = Spi::connect(|client| {
             client
                 .select(
                     "SELECT id FROM rule_definitions WHERE name = $1",
@@ -73,7 +73,8 @@ pub fn rule_save(
                 .get_one::<i32>()
         })?;
 
-        let id: i32 = id_opt.ok_or_else(|| RuleEngineError::DatabaseError("Failed to get rule ID".to_string()))?;
+        let id: i32 = id_opt
+            .ok_or_else(|| RuleEngineError::DatabaseError("Failed to get rule ID".to_string()))?;
 
         Spi::connect(|client| -> Result<Option<i64>, pgrx::spi::SpiError> {
             client
@@ -93,16 +94,28 @@ pub fn rule_save(
             .map(|d| dollar_quote(d))
             .unwrap_or_else(|| "NULL".to_string());
 
-    let new_id_opt: Option<i32> = Spi::connect(|client| {
+        let new_id_opt: Option<i32> = Spi::connect(|client| {
             // desc_sql is already either NULL or a dollar-quoted literal; build query string
             let q = format!(
                 "INSERT INTO rule_definitions (name, description, created_by, updated_by, is_active) VALUES ($1, {} , $2, $3, true) RETURNING id",
                 desc_sql
             );
-            client.select(&q, None, &[name.clone().into(), current_user.clone().into(), current_user.clone().into()])?.first().get_one::<i32>()
+            client
+                .select(
+                    &q,
+                    None,
+                    &[
+                        name.clone().into(),
+                        current_user.clone().into(),
+                        current_user.clone().into(),
+                    ],
+                )?
+                .first()
+                .get_one::<i32>()
         })?;
 
-        let new_id = new_id_opt.ok_or_else(|| RuleEngineError::DatabaseError("Failed to insert rule".to_string()))?;
+        let new_id = new_id_opt
+            .ok_or_else(|| RuleEngineError::DatabaseError("Failed to insert rule".to_string()))?;
         new_id
     };
 
@@ -174,8 +187,8 @@ pub fn rule_save(
         .unwrap_or_else(|| "NULL".to_string());
 
     // Use parameterized insert: pass grl_content and change_notes as parameters
-        Spi::connect(|client| -> Result<Option<i64>, pgrx::spi::SpiError> {
-            client
+    Spi::connect(|client| -> Result<Option<i64>, pgrx::spi::SpiError> {
+        client
                 .select(
                     "INSERT INTO rule_versions (rule_id, version, grl_content, change_notes, created_by, is_default) VALUES ($1, $2, $3, $4, $5, $6) RETURNING 1",
                     None,
@@ -190,7 +203,7 @@ pub fn rule_save(
                 )?
                 .first()
                 .get_one::<i64>()
-        })?;
+    })?;
 
     Ok(rule_id)
 }
@@ -201,7 +214,11 @@ pub fn rule_save(
 fn dollar_quote(s: &str) -> String {
     let mut idx: usize = 0;
     loop {
-        let tag = if idx == 0 { "DQ".to_string() } else { format!("DQ{}", idx) };
+        let tag = if idx == 0 {
+            "DQ".to_string()
+        } else {
+            format!("DQ{}", idx)
+        };
         let delim = format!("${}$", tag);
         if !s.contains(&delim) {
             let mut out = String::new();
@@ -259,8 +276,7 @@ pub fn rule_get(name: String, version: Option<String>) -> Result<String, RuleEng
                  FROM rule_versions rv
                  JOIN rule_definitions rd ON rv.rule_id = rd.id
                  WHERE rd.name = '{}' AND rv.version = '{}' AND rd.is_active = true",
-                name,
-                v
+                name, v
             ))?
         }
         None => {
@@ -302,8 +318,9 @@ pub fn rule_activate(name: String, version: String) -> Result<bool, RuleEngineEr
     validate_version(&version)?;
 
     // Check if rule and version exist
-    let version_id: Option<i32> = Spi::connect(|client| -> Result<Option<i32>, pgrx::spi::SpiError> {
-                client
+    let version_id: Option<i32> = Spi::connect(
+        |client| -> Result<Option<i32>, pgrx::spi::SpiError> {
+            client
                     .select(
                         "SELECT rv.id FROM rule_versions rv JOIN rule_definitions rd ON rv.rule_id = rd.id WHERE rd.name = $1 AND rv.version = $2",
                         None,
@@ -311,7 +328,8 @@ pub fn rule_activate(name: String, version: String) -> Result<bool, RuleEngineEr
                     )?
                     .first()
                     .get_one::<i32>()
-    })?;
+        },
+    )?;
 
     let version_id = version_id.ok_or_else(|| {
         RuleEngineError::RuleNotFound(format!("Rule '{}' version '{}' not found", name, version))
@@ -345,7 +363,7 @@ pub fn rule_delete(name: String, version: Option<String>) -> Result<bool, RuleEn
         validate_version(v)?;
 
         // Check if it's the default version
-            let is_default: bool = Spi::connect(|client| -> Result<Option<bool>, pgrx::spi::SpiError> {
+        let is_default: bool = Spi::connect(|client| -> Result<Option<bool>, pgrx::spi::SpiError> {
                 client
                     .select(
                         "SELECT rv.is_default FROM rule_versions rv JOIN rule_definitions rd ON rv.rule_id = rd.id WHERE rd.name = $1 AND rv.version = $2",
@@ -364,8 +382,9 @@ pub fn rule_delete(name: String, version: Option<String>) -> Result<bool, RuleEn
         }
 
         // Delete specific version
-    let rows_deleted: Option<i64> = Spi::connect(|client| -> Result<Option<i64>, pgrx::spi::SpiError> {
-            client
+        let rows_deleted: Option<i64> = Spi::connect(
+            |client| -> Result<Option<i64>, pgrx::spi::SpiError> {
+                client
                 .select(
                     "DELETE FROM rule_versions rv USING rule_definitions rd WHERE rv.rule_id = rd.id AND rd.name = $1 AND rv.version = $2 RETURNING 1",
                     None,
@@ -373,21 +392,23 @@ pub fn rule_delete(name: String, version: Option<String>) -> Result<bool, RuleEn
                 )?
                 .first()
                 .get_one::<i64>()
-        })?;
+            },
+        )?;
 
         Ok(rows_deleted.is_some())
     } else {
         // Delete entire rule (cascade will delete versions)
-    let rows_deleted: Option<i64> = Spi::connect(|client| -> Result<Option<i64>, pgrx::spi::SpiError> {
-            client
-                .select(
-                    "DELETE FROM rule_definitions WHERE name = $1 RETURNING 1",
-                    None,
-                    &[name.clone().into()],
-                )?
-                .first()
-                .get_one::<i64>()
-        })?;
+        let rows_deleted: Option<i64> =
+            Spi::connect(|client| -> Result<Option<i64>, pgrx::spi::SpiError> {
+                client
+                    .select(
+                        "DELETE FROM rule_definitions WHERE name = $1 RETURNING 1",
+                        None,
+                        &[name.clone().into()],
+                    )?
+                    .first()
+                    .get_one::<i64>()
+            })?;
 
         Ok(rows_deleted.is_some())
     }
@@ -401,7 +422,11 @@ pub fn rule_tag_add(name: String, tag: String) -> Result<bool, RuleEngineError> 
 
     let rule_id: Option<i32> = Spi::connect(|client| {
         client
-            .select("SELECT id FROM rule_definitions WHERE name = $1", None, &[name.clone().into()])?
+            .select(
+                "SELECT id FROM rule_definitions WHERE name = $1",
+                None,
+                &[name.clone().into()],
+            )?
             .first()
             .get_one::<i32>()
     })?;
@@ -429,7 +454,7 @@ pub fn rule_tag_remove(name: String, tag: String) -> Result<bool, RuleEngineErro
     validate_rule_name(&name)?;
 
     let rows_deleted: Option<i64> = Spi::connect(|client| {
-            client
+        client
                 .select(
                     "DELETE FROM rule_tags rt USING rule_definitions rd WHERE rt.rule_id = rd.id AND rd.name = $1 AND rt.tag = $2 RETURNING 1",
                     None,
