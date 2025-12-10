@@ -1,15 +1,17 @@
 # Dockerfile for PostgreSQL with rule-engine-postgre-extensions
-# Using PostgreSQL 17 (latest stable) on Debian Bookworm
-FROM postgres:17-bookworm
+# Supports PostgreSQL 16 and 17 via build arg
+ARG PG_VERSION=17
+FROM postgres:${PG_VERSION}-bookworm
 
 # Install build dependencies
+ARG PG_VERSION=17
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     git \
     pkg-config \
     libssl-dev \
-    postgresql-server-dev-17 \
+    postgresql-server-dev-${PG_VERSION} \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Rust
@@ -19,8 +21,9 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Install cargo-pgrx
 RUN cargo install cargo-pgrx --version 0.16.1 --locked
 
-# Initialize pgrx with PostgreSQL 17
-RUN cargo pgrx init --pg17 /usr/bin/pg_config
+# Initialize pgrx with correct PostgreSQL version
+ARG PG_VERSION=17
+RUN cargo pgrx init --pg${PG_VERSION} /usr/bin/pg_config
 
 # Copy extension source code
 WORKDIR /build
@@ -31,7 +34,8 @@ COPY rule_engine_postgre_extensions--*.sql ./
 COPY migrations ./migrations
 
 # Build the extension (don't use cargo pgrx install - pgrx_embed not available)
-RUN cargo build --release --no-default-features --features pg17
+ARG PG_VERSION=17
+RUN cargo build --release --no-default-features --features pg${PG_VERSION}
 
 # Manually install files
 RUN PG_LIB=$(pg_config --pkglibdir) && \
