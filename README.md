@@ -1,7 +1,7 @@
 # rule-engine-postgres
 
 [![CI](https://github.com/KSD-CO/rule-engine-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/KSD-CO/rule-engine-postgres/actions)
-[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Production-ready** PostgreSQL extension written in Rust that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) syntax with **forward chaining**, **backward chaining**, and **rule versioning** support.
@@ -30,11 +30,17 @@
 - 📊 **Execution Statistics**: Track performance, success rates, and trends
 - 🔔 **Event Triggers**: Automatic rule execution on table changes
 
-### Phase 2: Developer Experience ✅ NEW!
+### Phase 2: Developer Experience ✅
 - 🧪 **Testing Framework**: Create test cases, run tests, track coverage
 - ✅ **Validation & Linting**: Syntax validation, best practices checking
 - 🐛 **Debugging Tools**: Step-by-step execution traces, variable inspection
 - 📋 **Rule Templates**: Reusable templates with parameter substitution
+
+### Phase 4: Integration & Scalability ✅ NEW!
+- 📡 **Webhook Support**: HTTP callouts from rules to external APIs
+- 🔐 **Secret Management**: Secure storage for API keys and tokens
+- 🔄 **Retry Logic**: Exponential backoff for failed webhook calls
+- 📊 **Webhook Monitoring**: Real-time status tracking and analytics
 
 ### Production Ready
 - 🔒 **Production Grade**: Error codes, health checks, Docker support, CI/CD
@@ -88,84 +94,83 @@ cd rule-engine-postgres
 
 ---
 
-## What's New in v1.4.0 ⭐
+## What's New in v1.5.0 ⭐
 
-### Phase 2: Developer Experience - Testing, Validation, Debugging & Templates
+### Phase 4.2: Webhook Support - HTTP Callouts from Rules
 
-Complete developer tooling for building, testing, and maintaining rules!
+Integrate your rules with external systems via webhooks!
 
-- **🧪 Testing Framework**: Create comprehensive test suites
-  - Create test cases with 7 assertion types
-  - Run individual or batch tests
-  - Track test coverage per rule
-  - View test results history
+- **📡 Webhook Registration**: Configure HTTP endpoints
+  - Support all HTTP methods (GET, POST, PUT, PATCH, DELETE)
+  - Custom headers and authentication
+  - Configurable timeouts and retry policies
+  - Enable/disable webhooks dynamically
 
-- **✅ Validation & Linting**: Ensure rule quality
-  - GRL syntax validation before save
-  - Best practices checking
-  - Performance warnings (complex conditions, deep nesting)
-  - Unused variable detection
+- **🔐 Secret Management**: Secure credential storage
+  - Per-webhook secret storage
+  - API keys and tokens management
+  - Easy secret rotation
+  - Secure retrieval functions
 
-- **🐛 Debugging Tools**: Debug rule execution
-  - Step-by-step execution traces
-  - Debug session tracking
-  - Variable inspection at each step
-  - Before/after state comparison
+- **🔄 Retry Logic**: Automatic failure recovery
+  - Exponential backoff strategy
+  - Configurable max retries
+  - Retry queue processing
+  - Failed call tracking
 
-- **📋 Rule Templates**: Reusable rule patterns
-  - Parameter substitution with `{{param}}`
-  - Template library (3 built-in templates)
-  - Template categorization and usage tracking
-  - Instant rule generation from templates
+- **📊 Monitoring & Analytics**: Real-time insights
+  - Success/failure rates tracking
+  - Performance metrics (avg, min, max, percentiles)
+  - Recent failures view for debugging
+  - Call history with full audit trail
 
 ```sql
--- Create a test case
-SELECT rule_test_create(
-    'test_discount_gold',
-    'discount_rule',
-    '{"customer": {"tier": "gold", "total_spent": 5000}}'::JSONB,
-    '{"customer": {"tier": "gold", "discount": 0.15}}'::JSONB
+-- Register a webhook
+SELECT rule_webhook_register(
+    'slack_notifications',
+    'https://hooks.slack.com/services/YOUR/WEBHOOK/URL',
+    'POST',
+    '{"Content-Type": "application/json"}'::JSONB,
+    'Send notifications to Slack',
+    10000,  -- 10 second timeout
+    5       -- max 5 retries
 );
 
--- Run all tests
-SELECT * FROM rule_test_run_all('discount_rule');
+-- Set API key secret
+SELECT rule_webhook_secret_set(1, 'api_key', 'your-secret-key');
 
--- Validate rule syntax
-SELECT rule_validate('rule MyRule { when x > 10 then y = 20; }');
-
--- Lint with best practices
-SELECT rule_lint('rule MyRule { ... }', false);
-
--- Debug execution
-SELECT rule_debug_execute(
-    '{"x": 25}'::JSONB,
-    'rule Test { when x > 10 then y = 20; }',
-    'my_debug_session'
+-- Call webhook
+SELECT rule_webhook_call(
+    1,
+    '{"text": "Alert: High CPU usage", "severity": "warning"}'::JSONB
 );
 
--- List available templates
-SELECT * FROM rule_template_list();
+-- Monitor webhook status
+SELECT * FROM webhook_status_summary;
 
--- Instantiate template
-SELECT rule_template_instantiate(
-    1,  -- template_id
-    '{"field": "temperature", "threshold": "100"}'::JSONB
-);
+-- Check recent failures
+SELECT * FROM webhook_recent_failures LIMIT 10;
+
+-- View performance stats
+SELECT * FROM webhook_performance_stats;
 ```
 
 **New Functions**:
-- Testing: `rule_test_create`, `rule_test_run`, `rule_test_run_all`, `rule_test_coverage`
-- Validation: `rule_validate`, `rule_lint`
-- Debugging: `rule_debug_execute`, `rule_trace_get`
-- Templates: `rule_template_create`, `rule_template_instantiate`, `rule_template_list`, `rule_template_get`
+- Registration: `rule_webhook_register`, `rule_webhook_update`, `rule_webhook_delete`, `rule_webhook_list`, `rule_webhook_get`
+- Secrets: `rule_webhook_secret_set`, `rule_webhook_secret_get`, `rule_webhook_secret_delete`
+- Execution: `rule_webhook_call`, `rule_webhook_enqueue`, `rule_webhook_call_with_http`
+- Monitoring: `rule_webhook_call_status`, `rule_webhook_retry`, `rule_webhook_process_retries`
+- Maintenance: `rule_webhook_cleanup_old_calls`
 
-**New Tables**: `rule_test_cases`, `rule_test_results`, `rule_test_coverage`, `rule_debug_traces`, `rule_templates`, `rule_template_instances`
+**New Tables**: `rule_webhooks`, `rule_webhook_secrets`, `rule_webhook_calls`, `rule_webhook_call_history`
 
-**New Views**: `test_suite_summary`, `recent_test_failures`, `template_usage_stats`
+**New Views**: `webhook_status_summary`, `webhook_recent_failures`, `webhook_performance_stats`
 
-**Migration**: Run `migrations/004_developer_experience.sql` or upgrade with `ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.4.0';`
+**Migration**: Run `migrations/005_webhooks.sql` or upgrade with `ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.5.0';`
 
-**Documentation**: See [Phase 2 Documentation](docs/PHASE2_DEVELOPER_EXPERIENCE.md) for complete API reference.
+**Documentation**: See [Webhook Documentation](docs/WEBHOOKS.md) for complete API reference and examples.
+
+**Note**: For actual HTTP calls, install HTTP extension (`CREATE EXTENSION http;`) or use external worker to process webhook queue.
 
 ---
 
@@ -695,7 +700,9 @@ Technical documentation in this repo:
 - **[📖 Documentation Index](docs/README.md)** - Complete documentation navigation
 - **[🎯 Backward Chaining Guide](docs/guides/backward-chaining.md)** - Goal-driven reasoning guide
 - **[📦 Rule Repository RFC](docs/rfcs/0001-rule-repository.md)** - Technical design for versioning
-- **[🧪 Phase 2: Developer Experience](docs/PHASE2_DEVELOPER_EXPERIENCE.md)** - Testing, validation, debugging, templates ⭐ NEW
+- **[🧪 Phase 2: Developer Experience](docs/PHASE2_DEVELOPER_EXPERIENCE.md)** - Testing, validation, debugging, templates
+- **[📡 Phase 4.2: Webhook Support](docs/WEBHOOKS.md)** - HTTP callouts, retry logic, monitoring ⭐ NEW
+- **[🔄 Upgrade Instructions](docs/UPGRADE_INSTRUCTIONS.md)** - Detailed upgrade guide between versions ⭐ NEW
 - **[💡 Use Case Examples](docs/examples/use-cases.md)** - Real-world production examples
 - **[🔧 API Reference](docs/api-reference.md)** - Complete function reference
 - **[🔗 Integration Patterns](docs/integration-patterns.md)** - Triggers, JSONB, performance tips
@@ -829,7 +836,7 @@ src/
 
 ---
 
-**Version**: 1.4.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
+**Version**: 1.5.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
 
 ---
 

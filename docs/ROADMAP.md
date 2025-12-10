@@ -1,8 +1,8 @@
 # Rule Engine PostgreSQL - Product Roadmap
 
-**Version:** 1.4.0
-**Last Updated:** December 9, 2025
-**Status:** Phase 2 Developer Experience Complete ✅
+**Version:** 1.5.0
+**Last Updated:** December 10, 2025
+**Status:** Phase 2 Developer Experience Complete ✅ | Phase 4.2 Webhook Support Complete ✅
 
 ---
 
@@ -233,13 +233,38 @@ Transform PostgreSQL into a complete business rules management system with enter
 
 **Status:** ✅ Production-ready, fully tested, documented
 
-#### 4.2 Webhook Support
-- [ ] HTTP callouts from rule actions
-- [ ] Webhook configuration and secrets
-- [ ] Retry logic and error handling
-- [ ] API functions:
-  - `rule_webhook_register(name, url, headers) → webhook_id`
-  - `rule_webhook_call(webhook_id, payload) → JSON`
+#### 4.2 Webhook Support ✅ COMPLETED (Dec 2025)
+- [x] HTTP callouts from rule actions
+- [x] Webhook registration and configuration
+- [x] Secret management (API keys, tokens)
+- [x] Retry logic with exponential backoff
+- [x] Error handling and monitoring
+- [x] Database schema (rule_webhooks, rule_webhook_secrets, rule_webhook_calls, rule_webhook_call_history)
+- [x] API functions:
+  - [x] `rule_webhook_register(name, url, method, headers, ...) → webhook_id`
+  - [x] `rule_webhook_update(webhook_id, ...) → boolean`
+  - [x] `rule_webhook_delete(webhook_id) → boolean`
+  - [x] `rule_webhook_list() → TABLE`
+  - [x] `rule_webhook_get(identifier) → JSON`
+  - [x] `rule_webhook_secret_set(webhook_id, key, value) → boolean`
+  - [x] `rule_webhook_secret_get(webhook_id, key) → TEXT`
+  - [x] `rule_webhook_secret_delete(webhook_id, key) → boolean`
+  - [x] `rule_webhook_call(webhook_id, payload) → INTEGER`
+  - [x] `rule_webhook_enqueue(webhook_id, payload, scheduled_for) → INTEGER`
+  - [x] `rule_webhook_call_with_http(webhook_id, payload) → JSON`
+  - [x] `rule_webhook_call_status(call_id) → JSON`
+  - [x] `rule_webhook_retry(call_id) → boolean`
+  - [x] `rule_webhook_process_retries(batch_size) → INTEGER`
+  - [x] `rule_webhook_cleanup_old_calls(days) → bigint`
+- [x] Views: `webhook_status_summary`, `webhook_recent_failures`, `webhook_performance_stats`
+- [x] Queue-based processing for reliability
+- [x] Performance metrics (avg/min/max/p50/p95/p99)
+- [x] Optional HTTP extension integration
+- [x] External worker support
+- [x] Migration script (005_webhooks.sql)
+- [x] Complete documentation ([WEBHOOKS.md](WEBHOOKS.md))
+
+**Status:** ✅ Production-ready, fully tested, documented
 
 #### 4.3 External Data Sources
 - [ ] Fetch data from REST APIs in rules
@@ -387,7 +412,7 @@ Transform PostgreSQL into a complete business rules management system with enter
 | Temporal Rules | Medium | Medium | P1 | 3 |
 | Rule Caching | High | High | P1 | 3 |
 | A/B Testing | Medium | High | P2 | 3 |
-| Webhooks | Medium | Medium | P2 | 4 |
+| Webhooks | Medium | Medium | P0 ✅ | 4 |
 | Parallel Execution | High | High | P1 | 4 |
 | Analytics Dashboard | Low | Medium | P3 | 5 |
 | Rule Visualization | Low | Medium | P3 | 5 |
