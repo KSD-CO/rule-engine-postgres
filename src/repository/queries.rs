@@ -125,23 +125,42 @@ pub fn rule_save(
         }
         None => {
             // Auto-increment: get latest version and increment patch
-            let latest_version: Option<String> = Spi::connect(|client| {
+            // First check if any versions exist to avoid InvalidPosition error
+            let version_count: i64 = Spi::connect(|client| {
                 client
                     .select(
-                "SELECT version FROM rule_versions WHERE rule_id = $1 ORDER BY created_at DESC LIMIT 1",
-                    None,
+                        "SELECT COUNT(*) FROM rule_versions WHERE rule_id = $1",
+                        None,
                         &[rule_id.into()],
                     )?
                     .first()
-                    .get_one::<String>()
-            })?;
+                    .get_one::<i64>()
+            })?
+            .unwrap_or(0);
 
-            match latest_version {
-                Some(latest) => {
-                    let sem_ver = SemanticVersion::parse(&latest)?;
-                    sem_ver.increment_patch().to_string()
+            if version_count > 0 {
+                // Get latest version and increment
+                let latest_version: Option<String> = Spi::connect(|client| {
+                    client
+                        .select(
+                            "SELECT version FROM rule_versions WHERE rule_id = $1 ORDER BY created_at DESC LIMIT 1",
+                            None,
+                            &[rule_id.into()],
+                        )?
+                        .first()
+                        .get_one::<String>()
+                })?;
+
+                match latest_version {
+                    Some(latest) => {
+                        let sem_ver = SemanticVersion::parse(&latest)?;
+                        sem_ver.increment_patch().to_string()
+                    }
+                    None => "1.0.0".to_string(),
                 }
-                None => "1.0.0".to_string(), // First version
+            } else {
+                // First version
+                "1.0.0".to_string()
             }
         }
     };

@@ -18,16 +18,33 @@ pub fn test_spi_simple() -> Result<String, Box<dyn std::error::Error>> {
         .unwrap_or_else(|| "unknown".to_string());
 
     // Step 3: Check if rule exists (parameterized)
-    let rule_id_opt: Option<i32> = Spi::connect(|client| {
+    // First check if any rule exists to avoid InvalidPosition error
+    let rule_exists: bool = Spi::connect(|client| {
         client
             .select(
-                "SELECT id FROM rule_definitions WHERE name = $1",
+                "SELECT EXISTS(SELECT 1 FROM rule_definitions WHERE name = $1)",
                 None,
                 &[name.into()],
             )?
             .first()
-            .get_one::<i32>()
-    })?;
+            .get_one()
+    })?
+    .unwrap_or(false);
+
+    let rule_id_opt: Option<i32> = if rule_exists {
+        Spi::connect(|client| {
+            client
+                .select(
+                    "SELECT id FROM rule_definitions WHERE name = $1",
+                    None,
+                    &[name.into()],
+                )?
+                .first()
+                .get_one::<i32>()
+        })?
+    } else {
+        None
+    };
 
     Ok(format!("Step 3 result: {:?}", rule_id_opt))
 }
