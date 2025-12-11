@@ -1,6 +1,7 @@
 // Module declarations
 mod api;
 mod core;
+mod datasources;
 mod error;
 mod repository;
 mod validation;

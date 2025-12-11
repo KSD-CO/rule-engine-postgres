@@ -12,8 +12,16 @@ if [ "$EUID" -eq 0 ]; then
     exit 1
 fi
 
-# Allow overriding PostgreSQL version (default 17)
-PG_VERSION=${PG_VERSION:-16}
+# Auto-detect PostgreSQL version if not specified
+if [ -z "$PG_VERSION" ]; then
+    if command -v pg_config &> /dev/null; then
+        PG_VERSION=$(pg_config --version | sed 's/^PostgreSQL \([0-9]*\).*/\1/')
+        echo "Auto-detected PostgreSQL version: $PG_VERSION"
+    else
+        PG_VERSION=17
+        echo "⚠️  Warning: Could not detect PostgreSQL version, defaulting to $PG_VERSION"
+    fi
+fi
 
 echo "Building extension (release mode) for PostgreSQL ${PG_VERSION}..."
 # Use cargo pgrx install for direct installation (package has pgrx_embed issues)

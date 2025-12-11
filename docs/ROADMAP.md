@@ -1,8 +1,8 @@
 # Rule Engine PostgreSQL - Product Roadmap
 
-**Version:** 1.5.0
-**Last Updated:** December 10, 2025
-**Status:** Phase 2 Developer Experience Complete ✅ | Phase 4.2 Webhook Support Complete ✅
+**Version:** 1.6.0
+**Last Updated:** December 12, 2025
+**Status:** Phase 2 Developer Experience Complete ✅ | Phase 4.2 Webhook Support Complete ✅ | Phase 4.3 External Data Sources Complete ✅
 
 ---
 
@@ -210,10 +210,11 @@ Transform PostgreSQL into a complete business rules management system with enter
 
 ---
 
-### Phase 4: Integration & Scalability (v1.6.0)
+### Phase 4: Integration & Scalability (v1.6.0) ✅ PARTIALLY COMPLETED
 
-**Priority: MEDIUM**  
+**Priority: MEDIUM**
 **Goal:** Enable enterprise integrations and horizontal scaling
+**Status:** 3/4 features complete - Event Triggers ✅, Webhooks ✅, External Data Sources ✅
 
 #### 4.1 Event Triggers Integration ✅ COMPLETED (Dec 2025)
 - [x] Automatic rule execution on table changes
@@ -266,13 +267,36 @@ Transform PostgreSQL into a complete business rules management system with enter
 
 **Status:** ✅ Production-ready, fully tested, documented
 
-#### 4.3 External Data Sources
-- [ ] Fetch data from REST APIs in rules
-- [ ] Connection pooling
-- [ ] Caching strategies
-- [ ] API functions:
-  - `rule_datasource_register(name, url, auth) → ds_id`
-  - `rule_datasource_fetch(ds_id, params) → JSON`
+#### 4.3 External Data Sources ✅ COMPLETED (Dec 2025)
+- [x] Fetch data from REST APIs in rules
+- [x] Connection pooling (HTTP client with connection reuse)
+- [x] Caching strategies (TTL-based caching with hit tracking)
+- [x] Multiple authentication methods (None, Basic, Bearer, API Key, OAuth2)
+- [x] Database schema (rule_datasources, rule_datasource_auth, rule_datasource_cache, rule_datasource_requests, rule_datasource_rate_limits)
+- [x] API functions:
+  - [x] `rule_datasource_register(name, url, auth, ...) → datasource_id`
+  - [x] `rule_datasource_update(datasource_id, ...) → boolean`
+  - [x] `rule_datasource_delete(datasource_id) → boolean`
+  - [x] `rule_datasource_list(enabled_only) → TABLE`
+  - [x] `rule_datasource_get(identifier) → JSON`
+  - [x] `rule_datasource_auth_set(datasource_id, key, value) → boolean`
+  - [x] `rule_datasource_auth_get(datasource_id, key) → TEXT`
+  - [x] `rule_datasource_auth_delete(datasource_id, key) → boolean`
+  - [x] `rule_datasource_fetch(datasource_id, endpoint, params) → JSON`
+  - [x] `rule_datasource_cache_get(datasource_id, cache_key) → JSONB`
+  - [x] `rule_datasource_cache_set(datasource_id, ...) → boolean`
+  - [x] `rule_datasource_cache_clear(datasource_id) → bigint`
+  - [x] `rule_datasource_cache_cleanup() → bigint`
+  - [x] `rule_datasource_cleanup_old_requests(older_than, keep_failed) → bigint`
+- [x] Views: `datasource_status_summary`, `datasource_recent_failures`, `datasource_performance_stats`, `datasource_cache_stats`
+- [x] Rust HTTP client with reqwest (blocking mode)
+- [x] Retry logic with configurable max retries
+- [x] Performance metrics (avg/min/max/p50/p95/p99)
+- [x] Rate limiting tracking structure
+- [x] Migration script (006_external_datasources.sql)
+- [x] Complete documentation ([EXTERNAL_DATASOURCES.md](EXTERNAL_DATASOURCES.md))
+
+**Status:** ✅ Production-ready, fully tested, documented
 
 #### 4.4 Parallel Rule Execution
 - [ ] Identify independent rules
@@ -413,6 +437,7 @@ Transform PostgreSQL into a complete business rules management system with enter
 | Rule Caching | High | High | P1 | 3 |
 | A/B Testing | Medium | High | P2 | 3 |
 | Webhooks | Medium | Medium | P0 ✅ | 4 |
+| External Data Sources | Medium | Medium | P0 ✅ | 4 |
 | Parallel Execution | High | High | P1 | 4 |
 | Analytics Dashboard | Low | Medium | P3 | 5 |
 | Rule Visualization | Low | Medium | P3 | 5 |
