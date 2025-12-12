@@ -33,9 +33,7 @@ fn rule_datasource_fetch(
         let datasource_name = row.get::<String>(2)?.unwrap_or_default();
         let base_url = row.get::<String>(3)?.unwrap_or_default();
         let auth_type_str = row.get::<String>(4)?.unwrap_or("none".to_string());
-        let default_headers_json = row
-            .get::<JsonB>(5)?
-            .unwrap_or(JsonB(serde_json::json!({})));
+        let default_headers_json = row.get::<JsonB>(5)?.unwrap_or(JsonB(serde_json::json!({})));
         let timeout_ms = row.get::<i32>(6)?.unwrap_or(5000);
         let retry_enabled = row.get::<bool>(7)?.unwrap_or(true);
         let max_retries = row.get::<i32>(8)?.unwrap_or(3);
@@ -84,17 +82,7 @@ fn rule_datasource_fetch(
     if datasource.cache_enabled {
         let cache_result = check_cache(datasource_id, &cache_key);
         if let Ok(Some(cached_value)) = cache_result {
-            let _ = record_request(
-                datasource_id,
-                &endpoint,
-                "GET",
-                &params.0,
-                true,
-                None,
-                Some(&cached_value),
-                None,
-                Some(0.0),
-            );
+            let _ = record_request(datasource_id, &endpoint, "GET", &params.0, true, None);
 
             return Ok(JsonB(serde_json::json!({
                 "success": true,
@@ -106,8 +94,8 @@ fn rule_datasource_fetch(
     }
 
     let auth = load_auth_credentials(datasource_id)?;
-    let client = DataSourceClient::new()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let client =
+        DataSourceClient::new().map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
     let method = HttpMethod::Get;
     let response = client.fetch(&datasource, &auth, &endpoint, method, &params.0)?;
@@ -130,10 +118,7 @@ fn rule_datasource_fetch(
         "GET",
         &params.0,
         false,
-        None,
-        response.response_body.as_ref(),
         response.error_message.as_deref(),
-        response.execution_time_ms,
     )?;
 
     let result = serde_json::json!({
@@ -176,10 +161,7 @@ fn check_cache(datasource_id: i32, cache_key: &str) -> Result<Option<JsonValue>,
             "SELECT cache_value FROM rule_datasource_cache
              WHERE datasource_id = $1 AND cache_key = $2 AND expires_at > CURRENT_TIMESTAMP",
             None,
-            &[
-                datasource_id.into(),
-                cache_key.to_string().into(),
-            ],
+            &[datasource_id.into(), cache_key.to_string().into()],
         )?;
 
         if result.is_empty() {
@@ -194,10 +176,7 @@ fn check_cache(datasource_id: i32, cache_key: &str) -> Result<Option<JsonValue>,
              SET hit_count = hit_count + 1, last_hit_at = CURRENT_TIMESTAMP
              WHERE datasource_id = $1 AND cache_key = $2",
             None,
-            &[
-                datasource_id.into(),
-                cache_key.to_string().into(),
-            ],
+            &[datasource_id.into(), cache_key.to_string().into()],
         )?;
 
         Ok(cache_value.map(|v| v.0))
@@ -265,12 +244,9 @@ fn record_request(
     method: &str,
     params: &JsonValue,
     cache_hit: bool,
-    _rule_name: Option<&str>,
-    _response_body: Option<&JsonValue>,
-    _error_message: Option<&str>,
-    _execution_time_ms: Option<f64>,
+    error_message: Option<&str>,
 ) -> Result<i32, String> {
-    let status = if _error_message.is_some() {
+    let status = if error_message.is_some() {
         "failed"
     } else if cache_hit {
         "cached"

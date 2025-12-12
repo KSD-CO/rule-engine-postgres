@@ -3260,11 +3260,11 @@ SELECT
     ds.datasource_name,
     COUNT(r.request_id) as total_requests,
     ROUND(AVG(r.execution_time_ms)::NUMERIC, 2) as avg_time_ms,
-    ROUND(MIN(r.execution_time_ms), 2) as min_time_ms,
-    ROUND(MAX(r.execution_time_ms), 2) as max_time_ms,
-    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY r.execution_time_ms), 2) as p50_time_ms,
-    ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY r.execution_time_ms), 2) as p95_time_ms,
-    ROUND(PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY r.execution_time_ms), 2) as p99_time_ms
+    ROUND(MIN(r.execution_time_ms)::NUMERIC, 2) as min_time_ms,
+    ROUND(MAX(r.execution_time_ms)::NUMERIC, 2) as max_time_ms,
+    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY r.execution_time_ms)::NUMERIC, 2) as p50_time_ms,
+    ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY r.execution_time_ms)::NUMERIC, 2) as p95_time_ms,
+    ROUND(PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY r.execution_time_ms)::NUMERIC, 2) as p99_time_ms
 FROM rule_datasources ds
 LEFT JOIN rule_datasource_requests r ON ds.datasource_id = r.datasource_id
 WHERE r.execution_time_ms IS NOT NULL

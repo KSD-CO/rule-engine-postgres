@@ -1,6 +1,6 @@
 use super::models::{AuthType, DataSource, DataSourceAuth, DataSourceResponse};
 use reqwest::blocking::{Client, RequestBuilder};
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use reqwest::header::{HeaderName, HeaderValue};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -182,7 +182,7 @@ impl DataSourceClient {
 
     fn add_auth(
         &self,
-        mut request: RequestBuilder,
+        request: RequestBuilder,
         auth_type: &AuthType,
         auth: &DataSourceAuth,
     ) -> Result<RequestBuilder, String> {
@@ -207,7 +207,9 @@ impl DataSourceClient {
                 let header_name = auth
                     .get("header_name")
                     .ok_or("API key auth requires 'header_name'")?;
-                let api_key = auth.get("api_key").ok_or("API key auth requires 'api_key'")?;
+                let api_key = auth
+                    .get("api_key")
+                    .ok_or("API key auth requires 'api_key'")?;
 
                 let header_name = HeaderName::from_str(header_name)
                     .map_err(|e| format!("Invalid header name: {}", e))?;
@@ -237,10 +239,7 @@ impl DataSourceClient {
 
         loop {
             // Clone request for retry (note: this requires rebuilding the request each time)
-            let response = request
-                .try_clone()
-                .ok_or("Failed to clone request")?
-                .send();
+            let response = request.try_clone().ok_or("Failed to clone request")?.send();
 
             match response {
                 Ok(resp) => {
@@ -268,7 +267,10 @@ impl DataSourceClient {
                         std::thread::sleep(Duration::from_millis(1000 * attempts as u64));
                         continue;
                     } else {
-                        return Err(format!("HTTP request failed after {} retries: {}", attempts, e));
+                        return Err(format!(
+                            "HTTP request failed after {} retries: {}",
+                            attempts, e
+                        ));
                     }
                 }
             }
