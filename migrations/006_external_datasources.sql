@@ -97,7 +97,10 @@ CREATE TABLE IF NOT EXISTS rule_datasource_rate_limits (
 CREATE INDEX IF NOT EXISTS idx_datasources_enabled ON rule_datasources(enabled) WHERE enabled = true;
 CREATE INDEX IF NOT EXISTS idx_datasource_requests_status ON rule_datasource_requests(status, started_at);
 CREATE INDEX IF NOT EXISTS idx_datasource_requests_datasource ON rule_datasource_requests(datasource_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_datasource_cache_expires ON rule_datasource_cache(expires_at) WHERE expires_at > CURRENT_TIMESTAMP;
+-- Use a regular index on expires_at. Partial index with CURRENT_TIMESTAMP is invalid
+-- because CURRENT_TIMESTAMP is not IMMUTABLE. Queries comparing expires_at
+-- against the current time will still use this index when appropriate.
+CREATE INDEX IF NOT EXISTS idx_datasource_cache_expires ON rule_datasource_cache(expires_at);
 CREATE INDEX IF NOT EXISTS idx_datasource_cache_key ON rule_datasource_cache(datasource_id, cache_key);
 
 -- ============================================================================
@@ -210,7 +213,7 @@ BEGIN
                 ELSE 0
             END, 2
         ) as cache_hit_rate,
-        ROUND(AVG(r.execution_time_ms), 2) as avg_response_time_ms,
+    ROUND(AVG(r.execution_time_ms)::NUMERIC, 2) as avg_response_time_ms,
         ds.created_at
     FROM rule_datasources ds
     LEFT JOIN rule_datasource_requests r ON ds.datasource_id = r.datasource_id
@@ -423,7 +426,7 @@ SELECT
     COUNT(*) FILTER (WHERE r.status = 'success') as successful_requests,
     COUNT(*) FILTER (WHERE r.status = 'failed') as failed_requests,
     COUNT(*) FILTER (WHERE r.cache_hit = true) as cached_requests,
-    ROUND(AVG(r.execution_time_ms), 2) as avg_execution_time_ms,
+    ROUND(AVG(r.execution_time_ms)::NUMERIC, 2) as avg_execution_time_ms,
     MAX(r.created_at) as last_request_at,
     ROUND(
         CASE
@@ -472,12 +475,12 @@ SELECT
     ds.datasource_id,
     ds.datasource_name,
     COUNT(r.request_id) as total_requests,
-    ROUND(AVG(r.execution_time_ms), 2) as avg_time_ms,
-    ROUND(MIN(r.execution_time_ms), 2) as min_time_ms,
-    ROUND(MAX(r.execution_time_ms), 2) as max_time_ms,
-    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY r.execution_time_ms), 2) as p50_time_ms,
-    ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY r.execution_time_ms), 2) as p95_time_ms,
-    ROUND(PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY r.execution_time_ms), 2) as p99_time_ms
+    ROUND(AVG(r.execution_time_ms)::NUMERIC, 2) as avg_time_ms,
+    ROUND(MIN(r.execution_time_ms)::NUMERIC, 2) as min_time_ms,
+    ROUND(MAX(r.execution_time_ms)::NUMERIC, 2) as max_time_ms,
+    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY r.execution_time_ms)::NUMERIC, 2) as p50_time_ms,
+    ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY r.execution_time_ms)::NUMERIC, 2) as p95_time_ms,
+    ROUND(PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY r.execution_time_ms)::NUMERIC, 2) as p99_time_ms
 FROM rule_datasources ds
 LEFT JOIN rule_datasource_requests r ON ds.datasource_id = r.datasource_id
 WHERE r.execution_time_ms IS NOT NULL
@@ -495,7 +498,7 @@ SELECT
     COUNT(c.cache_id) as total_cache_entries,
     COUNT(*) FILTER (WHERE c.expires_at > CURRENT_TIMESTAMP) as valid_cache_entries,
     COUNT(*) FILTER (WHERE c.expires_at <= CURRENT_TIMESTAMP) as expired_cache_entries,
-    ROUND(AVG(c.hit_count), 2) as avg_hit_count,
+    ROUND(AVG(c.hit_count)::NUMERIC, 2) as avg_hit_count,
     SUM(c.hit_count) as total_hits,
     MAX(c.last_hit_at) as last_cache_hit_at
 FROM rule_datasources ds

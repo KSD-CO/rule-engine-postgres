@@ -363,8 +363,8 @@ SELECT
 -- Check average execution time
 SELECT 
     COUNT(*) AS total_executions,
-    ROUND(AVG(execution_time_ms), 2) AS avg_time_ms,
-    ROUND(MAX(execution_time_ms), 2) AS max_time_ms,
+    ROUND(AVG(execution_time_ms)::NUMERIC, 2) AS avg_time_ms,
+    ROUND(MAX(execution_time_ms)::NUMERIC, 2) AS max_time_ms,
     CASE 
         WHEN AVG(execution_time_ms) < 10 THEN '✓ Performance acceptable (<10ms avg)'
         WHEN AVG(execution_time_ms) < 50 THEN '⚠ Performance warning (10-50ms avg)'

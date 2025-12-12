@@ -350,7 +350,7 @@ SELECT
     COUNT(rth.id) AS total_executions,
     COUNT(CASE WHEN rth.success THEN 1 END) AS successful_executions,
     COUNT(CASE WHEN NOT rth.success THEN 1 END) AS failed_executions,
-    ROUND(AVG(rth.execution_time_ms), 2) AS avg_execution_time_ms,
+    ROUND(AVG(rth.execution_time_ms)::NUMERIC, 2) AS avg_execution_time_ms,
     MAX(rth.executed_at) AS last_executed_at
 FROM rule_triggers rt
 LEFT JOIN rule_trigger_history rth ON rt.id = rth.trigger_id
