@@ -235,7 +235,7 @@ SELECT * FROM webhook_status_summary;
 
 ### External Data Sources (API Integration)
 
-Fetch data from external REST APIs in your rules:
+Fetch data from external REST APIs in your rules with automatic encryption:
 
 ```sql
 -- Register external API
@@ -249,10 +249,15 @@ SELECT rule_datasource_register(
     300     -- 5min cache TTL
 );
 
--- Set API credentials
+-- Set API credentials (automatically encrypted with AES-256)
 SELECT rule_datasource_auth_set(1, 'api_key', 'your-secret-key');
+-- ✅ Credential stored encrypted using pgcrypto
 
--- Fetch data (with automatic caching)
+-- Verify encryption
+SELECT * FROM datasource_encryption_audit;
+-- Shows: encrypted_preview: "ww0EBwMC..." (encrypted blob)
+
+-- Fetch data (credentials auto-decrypted, with caching)
 SELECT rule_datasource_fetch(
     1,
     '/v1/score/customer123',
@@ -265,11 +270,12 @@ SELECT * FROM datasource_cache_stats;
 ```
 
 **Features:**
+- 🔐 **AES-256 Encryption** - Credentials encrypted at rest with pgcrypto
 - 🚀 Built-in LRU caching (85%+ hit rate)
 - 🔄 Automatic retry with exponential backoff
-- 🔐 Secure credential storage
 - 📊 Performance monitoring views
 - ⚡ Connection pooling (10 idle/host)
+- 🔑 Transparent encryption/decryption
 
 ---
 
@@ -286,6 +292,8 @@ SELECT * FROM datasource_cache_stats;
 - **[🎯 Backward Chaining](docs/guides/backward-chaining.md)** - Goal-driven reasoning
 - **[📡 Webhooks](docs/WEBHOOKS.md)** - HTTP callouts and retry logic
 - **[🔌 External Data Sources](docs/EXTERNAL_DATASOURCES.md)** - Fetch data from REST APIs
+- **[🔐 Credential Encryption](docs/CREDENTIAL_ENCRYPTION_GUIDE.md)** - AES-256 encryption guide
+- **[⚡ Data Sources Quick Reference](DATASOURCE_QUICK_REFERENCE.md)** - 5-minute cheat sheet
 - **[💼 Use Case: Fraud Detection](docs/USE_CASE_WEBHOOKS_DATASOURCES.md)** - Real-world example
 - **[🧪 Testing Framework](docs/PHASE2_DEVELOPER_EXPERIENCE.md)** - Test rules with assertions
 
@@ -293,6 +301,7 @@ SELECT * FROM datasource_cache_stats;
 - **[🔍 API Reference](docs/api-reference.md)** - All functions and syntax
 - **[💡 Use Cases](docs/examples/use-cases.md)** - Real-world examples
 - **[🔗 Integration Patterns](docs/integration-patterns.md)** - Triggers, JSONB, performance
+- **[📊 Data Source Functions](docs/EXTERNAL_DATASOURCES.md#functions)** - Complete datasource API
 
 ### Development
 - **[🏗️ Build from Source](docs/deployment/build-from-source.md)** - Manual build instructions

@@ -3330,3 +3330,149 @@ COMMENT ON FUNCTION rule_datasource_register IS 'Registers a new external data s
 COMMENT ON FUNCTION rule_datasource_fetch IS 'Fetches data from external API (Rust implementation)';
 COMMENT ON FUNCTION rule_datasource_cache_get IS 'Retrieves cached response if still valid';
 COMMENT ON FUNCTION rule_datasource_cache_cleanup IS 'Removes expired cache entries';
+
+-- ============================================================================
+-- CREDENTIAL ENCRYPTION (v1.6.1)
+-- ============================================================================
+
+-- Enable pgcrypto for encryption
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Config table for encryption key
+CREATE TABLE IF NOT EXISTS rule_engine_config (
+    config_key TEXT PRIMARY KEY,
+    config_value TEXT NOT NULL,
+    config_type TEXT DEFAULT 'string',
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE rule_engine_config IS 'System configuration including encryption keys';
+
+-- Generate encryption key on first install
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM rule_engine_config WHERE config_key = 'encryption_key') THEN
+        INSERT INTO rule_engine_config (config_key, config_value, description)
+        VALUES (
+            'encryption_key',
+            encode(gen_random_bytes(32), 'base64'),
+            'AES-256 encryption key for credentials'
+        );
+    END IF;
+END $$;
+
+-- Get encryption key
+CREATE OR REPLACE FUNCTION get_encryption_key()
+RETURNS TEXT AS $$
+DECLARE
+    v_key TEXT;
+BEGIN
+    SELECT config_value INTO v_key
+    FROM rule_engine_config
+    WHERE config_key = 'encryption_key';
+
+    IF v_key IS NULL THEN
+        RAISE EXCEPTION 'Encryption key not found';
+    END IF;
+
+    RETURN v_key;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Encrypt credential
+CREATE OR REPLACE FUNCTION encrypt_credential(p_plaintext TEXT)
+RETURNS TEXT AS $$
+BEGIN
+    IF p_plaintext IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    RETURN encode(
+        pgp_sym_encrypt(p_plaintext::TEXT, get_encryption_key()::TEXT),
+        'base64'
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Decrypt credential
+CREATE OR REPLACE FUNCTION decrypt_credential(p_encrypted TEXT)
+RETURNS TEXT AS $$
+BEGIN
+    IF p_encrypted IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    RETURN pgp_sym_decrypt(
+        decode(p_encrypted, 'base64'),
+        get_encryption_key()::TEXT
+    )::TEXT;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Update auth_set to auto-encrypt
+CREATE OR REPLACE FUNCTION rule_datasource_auth_set(
+    p_datasource_id INTEGER,
+    p_auth_key TEXT,
+    p_auth_value TEXT
+)
+RETURNS BOOLEAN AS $$
+BEGIN
+    IF p_datasource_id IS NULL OR p_auth_key IS NULL OR p_auth_value IS NULL THEN
+        RAISE EXCEPTION 'Parameters cannot be NULL';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM rule_datasources WHERE datasource_id = p_datasource_id) THEN
+        RAISE EXCEPTION 'Data source % does not exist', p_datasource_id;
+    END IF;
+
+    INSERT INTO rule_datasource_auth (datasource_id, auth_key, auth_value)
+    VALUES (p_datasource_id, p_auth_key, encrypt_credential(p_auth_value))
+    ON CONFLICT (datasource_id, auth_key)
+    DO UPDATE SET auth_value = encrypt_credential(p_auth_value), created_at = CURRENT_TIMESTAMP;
+
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Update auth_get to auto-decrypt
+CREATE OR REPLACE FUNCTION rule_datasource_auth_get(
+    p_datasource_id INTEGER,
+    p_auth_key TEXT
+)
+RETURNS TEXT AS $$
+DECLARE
+    v_encrypted TEXT;
+BEGIN
+    SELECT auth_value INTO v_encrypted
+    FROM rule_datasource_auth
+    WHERE datasource_id = p_datasource_id AND auth_key = p_auth_key;
+
+    IF v_encrypted IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    RETURN decrypt_credential(v_encrypted);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Encryption audit view
+CREATE OR REPLACE VIEW datasource_encryption_audit AS
+SELECT
+    da.auth_id,
+    da.datasource_id,
+    ds.datasource_name,
+    da.auth_key,
+    LEFT(da.auth_value, 20) || '...' AS encrypted_preview,
+    LENGTH(da.auth_value) AS encrypted_length,
+    da.created_at,
+    da.created_by
+FROM rule_datasource_auth da
+JOIN rule_datasources ds ON da.datasource_id = ds.datasource_id
+ORDER BY da.created_at DESC;
+
+COMMENT ON VIEW datasource_encryption_audit IS 'Safe audit view of encrypted credentials';
+COMMENT ON FUNCTION get_encryption_key() IS 'Retrieves encryption key from config';
+COMMENT ON FUNCTION encrypt_credential(TEXT) IS 'Encrypts credential using pgcrypto';
+COMMENT ON FUNCTION decrypt_credential(TEXT) IS 'Decrypts credential using pgcrypto';
