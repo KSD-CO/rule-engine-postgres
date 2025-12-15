@@ -64,6 +64,7 @@ impl DataSourceAuth {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataSourceRequest {
     pub datasource_id: i32,
@@ -84,6 +85,7 @@ pub struct DataSourceResponse {
     pub execution_time_ms: Option<f64>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheEntry {
     pub cache_key: String,
