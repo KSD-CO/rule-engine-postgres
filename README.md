@@ -6,7 +6,7 @@
 [![Performance](https://img.shields.io/badge/Performance-48.5k_TPS-brightgreen.svg)](load-tests/BENCHMARK_RESULTS.md)
 [![Benchmark](https://img.shields.io/badge/Benchmark-0.1ms_latency-success.svg)](load-tests/QUICK_RESULTS.md)
 
-**Production-ready** PostgreSQL extension that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) with forward chaining, backward chaining, and full rule versioning support.
+PostgreSQL extension that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) with forward chaining, backward chaining, and full rule versioning support.
 
 > **⚡ NEW: Benchmark Results Available!**
 > **48,589 TPS** (0.1ms latency) for simple rules | **1,802 TPS** for complex rules | **12 TPS** for 500-rule batch processing
@@ -117,7 +117,7 @@ SELECT run_rule_engine(
 | Feature | Benefit |
 |---------|---------|
 | **🚀 No Microservices** | Business rules run directly in PostgreSQL - no external services |
-| **⚡ High Performance** | Sub-millisecond execution (~1000 rules/sec) |
+| **⚡ High Performance** | Sub-millisecond execution (48,589 TPS for simple rules) |
 | **🎯 Dual Reasoning** | Forward chaining (data-driven) + Backward chaining (goal-driven) |
 | **📦 Rule Repository** | Version control, tagging, and activation management |
 | **🔄 Dynamic Logic** | Change business rules without code deployment |
@@ -503,8 +503,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- Built with [pgrx](https://github.com/pgcentralfoundation/pgrx) - PostgreSQL extension framework
-- Powered by [rust-rule-engine](https://crates.io/crates/rust-rule-engine) v1.7.0
+- Built with [pgrx](https://github.com/pgcentralfoundation/pgrx) v0.16.1 - PostgreSQL extension framework
+- Powered by [rust-rule-engine](https://crates.io/crates/rust-rule-engine) v1.8 with backward-chaining
 - Inspired by Drools and Grule
 
 ---
@@ -514,19 +514,32 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ```
 src/
 ├── api/                       # Public API functions
-│   ├── engine.rs              # Forward chaining
-│   ├── backward.rs            # Backward chaining
+│   ├── engine.rs              # Forward chaining execution
+│   ├── backward.rs            # Backward chaining queries
 │   ├── triggers.rs            # Event triggers
-│   └── rulesets.rs            # Rule sets
-├── repository/                # Rule repository
+│   ├── rulesets.rs            # Rule sets
+│   ├── datasources.rs         # External data source API
+│   ├── stats.rs               # Performance statistics
+│   └── health.rs              # Health check endpoints
+├── repository/                # Rule repository & versioning
 │   ├── queries.rs             # CRUD operations
 │   ├── models.rs              # Data structures
-│   └── version.rs             # Semantic versioning
-├── core/                      # Core engine
-│   ├── executor.rs            # Forward chaining logic
+│   ├── version.rs             # Semantic versioning
+│   ├── validation.rs          # Repository validation
+│   └── test_spi.rs            # Testing framework
+├── core/                      # Rule engine core
+│   ├── executor.rs            # Forward chaining execution
 │   ├── backward.rs            # Backward chaining logic
-│   └── rules.rs               # GRL parsing
-└── validation/                # Input validation
+│   ├── rules.rs               # GRL parsing & compilation
+│   └── facts.rs               # Fact management
+├── datasources/               # External API integration (v1.6.0)
+│   ├── client.rs              # HTTP client & connection pooling
+│   └── models.rs              # Data source models
+├── validation/                # Input validation & limits
+│   ├── input.rs               # JSON/GRL validation
+│   └── limits.rs              # Resource limits
+└── error/                     # Error handling
+    └── codes.rs               # Error codes & messages
 ```
 
 ---
