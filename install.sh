@@ -111,7 +111,7 @@ echo "  psql -d your_database -c \"CREATE EXTENSION rule_engine_postgre_extensio
 echo "  psql -d your_database -c \"SELECT rule_engine_version();\""
 echo ""
 echo "For UPGRADE (existing installation):"
-echo "  psql -d your_database -c \"ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.5.0';\""
+echo "  psql -d your_database -c \"ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '1.6.0';\""
 echo "  psql -d your_database -c \"SELECT rule_engine_version();\""
 echo ""
 echo "See docs/UPGRADE_INSTRUCTIONS.md for detailed upgrade guide."

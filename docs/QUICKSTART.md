@@ -107,7 +107,10 @@ sudo -u postgres psql -d your_database
 Then enable the extension:
 
 ```sql
--- Create the extension
+-- IMPORTANT: Install pgcrypto first (required for v1.6.0+)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Create the rule engine extension
 CREATE EXTENSION IF NOT EXISTS rule_engine_postgre_extensions;
 
 -- Verify it's working
@@ -118,9 +121,11 @@ SELECT rule_engine_version();
 ```
  rule_engine_version
 ---------------------
- 1.5.0
+ 1.6.0
 (1 row)
 ```
+
+**Note:** The `pgcrypto` extension is required for credential encryption in External Data Sources.
 
 ✅ **Success!** The extension is ready to use.
 

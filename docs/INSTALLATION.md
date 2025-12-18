@@ -275,12 +275,17 @@ sudo systemctl restart postgresql-16
 -- Connect to your database
 sudo -u postgres psql -d your_database
 
--- Create the extension
+-- IMPORTANT: Install pgcrypto first (required for v1.6.0+)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Create the rule engine extension
 CREATE EXTENSION IF NOT EXISTS rule_engine_postgre_extensions;
 
--- Verify
+-- Verify installation
 SELECT rule_engine_version();
 ```
+
+**Note:** Starting from v1.6.0, the `pgcrypto` extension is required for credential encryption in External Data Sources. Always install `pgcrypto` before installing the rule engine extension.
 
 ---
 
@@ -381,7 +386,13 @@ sudo systemctl restart postgresql
 ### Step 5: Enable the Extension
 
 ```sql
+-- IMPORTANT: Install pgcrypto first (required for v1.6.0+)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Create the rule engine extension
 CREATE EXTENSION IF NOT EXISTS rule_engine_postgre_extensions;
+
+-- Verify
 SELECT rule_engine_version();
 ```
 
@@ -418,11 +429,14 @@ After installation, verify the extension works:
 -- Connect to PostgreSQL
 psql -U postgres -d postgres
 
+-- Ensure pgcrypto is installed (required for v1.6.0+)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Check version
 SELECT rule_engine_version();
 ```
 
-**Expected:** `1.5.0`
+**Expected:** `1.6.0`
 
 ```sql
 -- Run health check

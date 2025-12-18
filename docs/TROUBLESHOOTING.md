@@ -18,6 +18,32 @@ Common issues and solutions for rule-engine-postgres.
 
 ## Installation Issues
 
+### ❌ "nested CREATE EXTENSION is not supported" (v1.6.0+)
+
+**Error:**
+```sql
+ERROR:  nested CREATE EXTENSION is not supported
+```
+
+**Cause:** Starting from v1.6.0, the rule engine extension requires `pgcrypto` for credential encryption. If `pgcrypto` is not installed first, you'll get this error.
+
+**Solution:**
+```sql
+-- 1. Install pgcrypto first
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- 2. Then install rule engine
+CREATE EXTENSION IF NOT EXISTS rule_engine_postgre_extensions;
+
+-- 3. Verify
+SELECT rule_engine_version();
+```
+
+**Prevention:**
+Always install `pgcrypto` before the rule engine extension (required for v1.6.0+). This is documented in the [Installation Guide](INSTALLATION.md).
+
+---
+
 ### ❌ "Extension not found" after installation
 
 **Error:**
