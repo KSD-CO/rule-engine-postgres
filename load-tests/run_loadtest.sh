@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 DB_HOST=${DB_HOST:-localhost}
 DB_PORT=${DB_PORT:-5432}
 DB_NAME=${DB_NAME:-postgres}
-DB_USER=${DB_USER:-postgres}
+DB_USER=${DB_USER:-$(whoami)}  # Auto-detect current user
 DB_PASSWORD=${DB_PASSWORD:-postgres}
 
 # pgbench parameters
@@ -72,6 +72,7 @@ run_test() {
 
     # Run pgbench
     if pgbench $CONN_STR \
+        -n \
         -c $CLIENTS \
         -j $THREADS \
         -T $DURATION \

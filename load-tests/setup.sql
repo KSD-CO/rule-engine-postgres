@@ -13,14 +13,14 @@ DO $$
 BEGIN
     -- Clean webhook data if tables exist
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'rule_webhooks') THEN
-        DELETE FROM rule_webhook_calls WHERE webhook_id IN (SELECT webhook_id FROM rule_webhooks WHERE name LIKE 'loadtest_%');
-        DELETE FROM rule_webhooks WHERE name LIKE 'loadtest_%';
+        DELETE FROM rule_webhook_calls WHERE webhook_id IN (SELECT webhook_id FROM rule_webhooks WHERE webhook_name LIKE 'loadtest_%');
+        DELETE FROM rule_webhooks WHERE webhook_name LIKE 'loadtest_%';
     END IF;
 
     -- Clean datasource data if tables exist
     IF EXISTS (SELECT FROM pg_tables WHERE tablename = 'rule_datasources') THEN
-        DELETE FROM rule_datasource_requests WHERE datasource_id IN (SELECT datasource_id FROM rule_datasources WHERE name LIKE 'loadtest_%');
-        DELETE FROM rule_datasources WHERE name LIKE 'loadtest_%';
+        DELETE FROM rule_datasource_requests WHERE datasource_id IN (SELECT datasource_id FROM rule_datasources WHERE datasource_name LIKE 'loadtest_%');
+        DELETE FROM rule_datasources WHERE datasource_name LIKE 'loadtest_%';
     END IF;
 
     -- Clean rule repository data if tables exist
