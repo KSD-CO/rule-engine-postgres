@@ -14,13 +14,28 @@ pub fn run_rule_engine(facts_json: &str, rules_grl: &str) -> String {
     }
 
     // Parse facts from JSON
-    let facts = match json_to_facts(facts_json) {
+    let mut facts_value: serde_json::Value = match serde_json::from_str(facts_json) {
+        Ok(v) => v,
+        Err(e) => return create_custom_error(&codes::INVALID_JSON, e.to_string()),
+    };
+
+    // Preprocess GRL with built-in functions (v1.7.0+)
+    let transformed_grl = match crate::functions::preprocessing::preprocess_grl_with_functions(
+        rules_grl,
+        &mut facts_value,
+    ) {
+        Ok(grl) => grl,
+        Err(e) => return create_custom_error(&codes::INVALID_GRL, format!("Function preprocessing error: {}", e)),
+    };
+
+    // Convert enhanced facts to Facts object
+    let facts = match json_to_facts(&serde_json::to_string(&facts_value).unwrap()) {
         Ok(f) => f,
         Err(e) => return create_custom_error(&codes::INVALID_JSON, e),
     };
 
-    // Parse rules from GRL
-    let rules = match parse_and_validate_rules(rules_grl) {
+    // Parse rules from transformed GRL
+    let rules = match parse_and_validate_rules(&transformed_grl) {
         Ok(r) => r,
         Err(e) => {
             if e.contains("No valid rules") {

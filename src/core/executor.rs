@@ -5,6 +5,9 @@ pub fn execute_rules(facts: &Facts, rules: Vec<rust_rule_engine::Rule>) -> Resul
     let kb = KnowledgeBase::new("PostgresExtension");
     let mut engine = RustRuleEngine::new(kb);
 
+    // Register all built-in functions (v1.7.0+)
+    crate::functions::registration::register_all_functions(&mut engine);
+
     // Register action handler for 'print'
     engine.register_action_handler("print", |args, _context| {
         if let Some(val) = args.get("0") {

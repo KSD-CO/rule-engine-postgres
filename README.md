@@ -1,12 +1,12 @@
 # rule-engine-postgres
 
 [![CI](https://github.com/KSD-CO/rule-engine-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/KSD-CO/rule-engine-postgres/actions)
-[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
+[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Performance](https://img.shields.io/badge/Performance-48.5k_TPS-brightgreen.svg)](load-tests/BENCHMARK_RESULTS.md)
 [![Benchmark](https://img.shields.io/badge/Benchmark-0.1ms_latency-success.svg)](load-tests/QUICK_RESULTS.md)
 
-PostgreSQL extension that brings rule engine capabilities directly into your database. Execute complex business logic using GRL (Grule Rule Language) with forward chaining, backward chaining, and full rule versioning support.
+PostgreSQL extension that brings rule engine capabilities with **24 built-in functions** directly into your database. Execute complex business logic using GRL (Grule Rule Language) with forward chaining, backward chaining, and full rule versioning support.
 
 > **⚡ NEW: Benchmark Results Available!**
 > **48,589 TPS** (0.1ms latency) for simple rules | **1,802 TPS** for complex rules | **12 TPS** for 500-rule batch processing
@@ -44,14 +44,14 @@ curl -fsSL https://raw.githubusercontent.com/KSD-CO/rule-engine-postgres/main/qu
 
 **Ubuntu/Debian:**
 ```bash
-wget https://github.com/KSD-CO/rule-engine-postgres/releases/download/v1.6.0/postgresql-16-rule-engine_1.6.0_amd64.deb
-sudo dpkg -i postgresql-16-rule-engine_1.6.0_amd64.deb
+wget https://github.com/KSD-CO/rule-engine-postgres/releases/download/v1.7.0/postgresql-16-rule-engine_1.7.0_amd64.deb
+sudo dpkg -i postgresql-16-rule-engine_1.7.0_amd64.deb
 ```
 
 **RHEL/Rocky/AlmaLinux:**
 ```bash
-wget https://github.com/KSD-CO/rule-engine-postgres/releases/download/v1.6.0/postgresql16-rule-engine-1.6.0-1.x86_64.rpm
-sudo rpm -i postgresql16-rule-engine-1.6.0-1.x86_64.rpm
+wget https://github.com/KSD-CO/rule-engine-postgres/releases/download/v1.7.0/postgresql16-rule-engine-1.7.0-1.x86_64.rpm
+sudo rpm -i postgresql16-rule-engine-1.7.0-1.x86_64.rpm
 ```
 </details>
 
@@ -84,7 +84,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION rule_engine_postgre_extensions;
 
 -- Verify
-SELECT rule_engine_version();  -- Returns: 1.6.0
+SELECT rule_engine_version();  -- Returns: 1.7.0
 ```
 
 **Note:** The `pgcrypto` extension is required for credential encryption in External Data Sources (v1.6.0+).
@@ -126,6 +126,52 @@ SELECT run_rule_engine(
 ---
 
 ## 🎯 Core Features
+
+### 🆕 Built-in Functions Library (v1.7.0)
+
+**24 built-in functions** for data transformation and validation in GRL rules:
+
+```sql
+-- Email validation with built-in function
+SELECT run_rule_engine(
+    '{"Customer": {"email": "user@example.com", "approved": false}}',
+    'rule "ValidEmail" {
+        when IsValidEmail(Customer.email) == true
+        then Customer.approved = true;
+    }'
+);
+
+-- Date-based rules
+SELECT run_rule_engine(
+    '{"Order": {"createdAt": "2024-01-01", "isExpired": false}}',
+    'rule "CheckAge" {
+        when DaysSince(Order.createdAt) > 90
+        then Order.isExpired = true;
+    }'
+);
+
+-- Math operations
+SELECT run_rule_engine(
+    '{"Order": {"price1": 10.5, "price2": 99.99, "hasLowPrice": false}}',
+    'rule "CheckPrice" {
+        when Min(Order.price1, Order.price2) < 15.0
+        then Order.hasLowPrice = true;
+    }'
+);
+```
+
+**Available Functions:**
+- **Date/Time (5):** `DaysSince`, `AddDays`, `FormatDate`, `Now`, `Today`
+- **String (8):** `IsValidEmail`, `Contains`, `RegexMatch`, `ToUpper`, `ToLower`, `Trim`, `Length`, `Substring`
+- **Math (7):** `Round`, `Abs`, `Min`, `Max`, `Floor`, `Ceil`, `Sqrt`
+- **JSON (4):** `JsonParse`, `JsonStringify`, `JsonGet`, `JsonSet`
+
+**List all functions:**
+```sql
+SELECT * FROM rule_function_list();
+```
+
+---
 
 ### Rule Execution Modes
 

@@ -3,6 +3,7 @@ mod api;
 mod core;
 mod datasources;
 mod error;
+mod functions;
 mod repository;
 mod validation;
 
