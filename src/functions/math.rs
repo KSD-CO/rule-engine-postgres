@@ -135,13 +135,14 @@ pub fn sqrt(args: &[Value]) -> Result<Value, String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
     use serde_json::json;
-
+    use std::f32::consts::PI;
     #[test]
     fn test_round() {
-        assert_eq!(round(&[json!(3.14159), json!(2)]).unwrap(), json!(3.14));
+        assert_eq!(round(&[json!(PI), json!(2)]).unwrap(), json!(3.14));
         assert_eq!(round(&[json!(3.7)]).unwrap(), json!(4.0));
     }
 

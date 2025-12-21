@@ -177,12 +177,13 @@ fn rule_function_list() -> TableIterator<
 }
 
 #[cfg(test)]
+#[allow(clippy::approx_constant)]
 mod tests {
     use super::*;
-
+    use std::f32::consts::PI;
     #[test]
     fn test_rule_function_call() {
-        let args = pgrx::JsonB(serde_json::json!([3.14159, 2]));
+        let args = pgrx::JsonB(serde_json::json!([PI, 2]));
         let result = rule_function_call("Round", args).unwrap();
         assert_eq!(result.0, serde_json::json!(3.14));
     }
