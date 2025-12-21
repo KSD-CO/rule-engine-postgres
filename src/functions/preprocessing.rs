@@ -3,10 +3,8 @@
 /// 1. Parsing function calls from GRL
 /// 2. Evaluating functions and injecting results into facts
 /// 3. Replacing function calls with computed field references
-
 use regex::Regex;
 use serde_json::Value;
-use std::collections::HashMap;
 
 /// Represents a function call found in GRL code
 #[derive(Debug, Clone)]
@@ -86,10 +84,7 @@ pub fn transform_grl(grl_code: &str, function_calls: &[FunctionCall]) -> String 
 }
 
 /// Evaluate a function call and return the result
-pub fn evaluate_function_call(
-    call: &FunctionCall,
-    facts: &Value,
-) -> Result<Value, String> {
+pub fn evaluate_function_call(call: &FunctionCall, facts: &Value) -> Result<Value, String> {
     // Parse arguments and resolve field references
     let args = parse_and_resolve_args(&call.raw_args, facts)?;
 
@@ -117,9 +112,11 @@ fn parse_and_resolve_args(raw_args: &str, facts: &Value) -> Result<Vec<Value>, S
             args.push(Value::Number(num.into()));
         } else if let Ok(num) = arg_trimmed.parse::<f64>() {
             // Float literal
-            args.push(serde_json::Number::from_f64(num)
-                .map(Value::Number)
-                .unwrap_or(Value::Null));
+            args.push(
+                serde_json::Number::from_f64(num)
+                    .map(Value::Number)
+                    .unwrap_or(Value::Null),
+            );
         } else if arg_trimmed == "true" {
             args.push(Value::Bool(true));
         } else if arg_trimmed == "false" {
@@ -165,8 +162,7 @@ pub fn inject_computed_field(
         return Err("Facts must be a JSON object".to_string());
     }
 
-    let facts_obj = facts.as_object_mut()
-        .ok_or("Facts must be a JSON object")?;
+    let facts_obj = facts.as_object_mut().ok_or("Facts must be a JSON object")?;
 
     // Get or create context object
     let context = facts_obj
@@ -182,10 +178,7 @@ pub fn inject_computed_field(
 }
 
 /// Main preprocessing function - transform GRL and enhance facts
-pub fn preprocess_grl_with_functions(
-    grl_code: &str,
-    facts: &mut Value,
-) -> Result<String, String> {
+pub fn preprocess_grl_with_functions(grl_code: &str, facts: &mut Value) -> Result<String, String> {
     // Step 1: Parse function calls
     let function_calls = parse_function_calls(grl_code)?;
 
@@ -228,8 +221,14 @@ mod tests {
 
     #[test]
     fn test_extract_context_object() {
-        assert_eq!(extract_context_object("Customer.email").unwrap(), "Customer");
-        assert_eq!(extract_context_object("Order.total * 1.08, 2").unwrap(), "Order");
+        assert_eq!(
+            extract_context_object("Customer.email").unwrap(),
+            "Customer"
+        );
+        assert_eq!(
+            extract_context_object("Order.total * 1.08, 2").unwrap(),
+            "Order"
+        );
     }
 
     #[test]

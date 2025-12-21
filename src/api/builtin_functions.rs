@@ -1,6 +1,5 @@
 /// PostgreSQL wrapper functions for built-in GRL functions
 /// Allows calling built-in functions directly from SQL for testing
-
 use pgrx::prelude::*;
 use serde_json::Value;
 
@@ -39,39 +38,139 @@ fn rule_function_call(
 /// SELECT * FROM rule_function_list();
 /// ```
 #[pg_extern]
-fn rule_function_list() -> TableIterator<'static, (name!(function_name, String), name!(category, String), name!(description, String))> {
+fn rule_function_list() -> TableIterator<
+    'static,
+    (
+        name!(function_name, String),
+        name!(category, String),
+        name!(description, String),
+    ),
+> {
     let functions = vec![
         // Date/time functions
-        ("DaysSince".to_string(), "datetime".to_string(), "Calculate days since a given date".to_string()),
-        ("AddDays".to_string(), "datetime".to_string(), "Add days to a date".to_string()),
-        ("FormatDate".to_string(), "datetime".to_string(), "Format a date with custom format".to_string()),
-        ("Now".to_string(), "datetime".to_string(), "Get current timestamp".to_string()),
-        ("Today".to_string(), "datetime".to_string(), "Get current date".to_string()),
-
+        (
+            "DaysSince".to_string(),
+            "datetime".to_string(),
+            "Calculate days since a given date".to_string(),
+        ),
+        (
+            "AddDays".to_string(),
+            "datetime".to_string(),
+            "Add days to a date".to_string(),
+        ),
+        (
+            "FormatDate".to_string(),
+            "datetime".to_string(),
+            "Format a date with custom format".to_string(),
+        ),
+        (
+            "Now".to_string(),
+            "datetime".to_string(),
+            "Get current timestamp".to_string(),
+        ),
+        (
+            "Today".to_string(),
+            "datetime".to_string(),
+            "Get current date".to_string(),
+        ),
         // String functions
-        ("IsValidEmail".to_string(), "string".to_string(), "Validate email address".to_string()),
-        ("Contains".to_string(), "string".to_string(), "Check if string contains substring".to_string()),
-        ("RegexMatch".to_string(), "string".to_string(), "Match string against regex pattern".to_string()),
-        ("ToUpper".to_string(), "string".to_string(), "Convert string to uppercase".to_string()),
-        ("ToLower".to_string(), "string".to_string(), "Convert string to lowercase".to_string()),
-        ("Trim".to_string(), "string".to_string(), "Trim whitespace from both ends".to_string()),
-        ("Length".to_string(), "string".to_string(), "Get string length".to_string()),
-        ("Substring".to_string(), "string".to_string(), "Get substring".to_string()),
-
+        (
+            "IsValidEmail".to_string(),
+            "string".to_string(),
+            "Validate email address".to_string(),
+        ),
+        (
+            "Contains".to_string(),
+            "string".to_string(),
+            "Check if string contains substring".to_string(),
+        ),
+        (
+            "RegexMatch".to_string(),
+            "string".to_string(),
+            "Match string against regex pattern".to_string(),
+        ),
+        (
+            "ToUpper".to_string(),
+            "string".to_string(),
+            "Convert string to uppercase".to_string(),
+        ),
+        (
+            "ToLower".to_string(),
+            "string".to_string(),
+            "Convert string to lowercase".to_string(),
+        ),
+        (
+            "Trim".to_string(),
+            "string".to_string(),
+            "Trim whitespace from both ends".to_string(),
+        ),
+        (
+            "Length".to_string(),
+            "string".to_string(),
+            "Get string length".to_string(),
+        ),
+        (
+            "Substring".to_string(),
+            "string".to_string(),
+            "Get substring".to_string(),
+        ),
         // Math functions
-        ("Round".to_string(), "math".to_string(), "Round a number to specified decimal places".to_string()),
-        ("Abs".to_string(), "math".to_string(), "Absolute value".to_string()),
-        ("Min".to_string(), "math".to_string(), "Minimum of two or more numbers".to_string()),
-        ("Max".to_string(), "math".to_string(), "Maximum of two or more numbers".to_string()),
-        ("Floor".to_string(), "math".to_string(), "Floor (round down)".to_string()),
-        ("Ceil".to_string(), "math".to_string(), "Ceiling (round up)".to_string()),
-        ("Sqrt".to_string(), "math".to_string(), "Square root".to_string()),
-
+        (
+            "Round".to_string(),
+            "math".to_string(),
+            "Round a number to specified decimal places".to_string(),
+        ),
+        (
+            "Abs".to_string(),
+            "math".to_string(),
+            "Absolute value".to_string(),
+        ),
+        (
+            "Min".to_string(),
+            "math".to_string(),
+            "Minimum of two or more numbers".to_string(),
+        ),
+        (
+            "Max".to_string(),
+            "math".to_string(),
+            "Maximum of two or more numbers".to_string(),
+        ),
+        (
+            "Floor".to_string(),
+            "math".to_string(),
+            "Floor (round down)".to_string(),
+        ),
+        (
+            "Ceil".to_string(),
+            "math".to_string(),
+            "Ceiling (round up)".to_string(),
+        ),
+        (
+            "Sqrt".to_string(),
+            "math".to_string(),
+            "Square root".to_string(),
+        ),
         // JSON functions
-        ("JsonParse".to_string(), "json".to_string(), "Parse JSON string to object".to_string()),
-        ("JsonStringify".to_string(), "json".to_string(), "Convert object to JSON string".to_string()),
-        ("JsonGet".to_string(), "json".to_string(), "Get value from JSON object by path".to_string()),
-        ("JsonSet".to_string(), "json".to_string(), "Set value in JSON object by path".to_string()),
+        (
+            "JsonParse".to_string(),
+            "json".to_string(),
+            "Parse JSON string to object".to_string(),
+        ),
+        (
+            "JsonStringify".to_string(),
+            "json".to_string(),
+            "Convert object to JSON string".to_string(),
+        ),
+        (
+            "JsonGet".to_string(),
+            "json".to_string(),
+            "Get value from JSON object by path".to_string(),
+        ),
+        (
+            "JsonSet".to_string(),
+            "json".to_string(),
+            "Set value in JSON object by path".to_string(),
+        ),
     ];
 
     TableIterator::new(functions)

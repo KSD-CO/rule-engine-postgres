@@ -1,5 +1,4 @@
 /// Date/time built-in functions
-
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use serde_json::Value;
 

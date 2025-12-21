@@ -1,5 +1,4 @@
 /// String manipulation built-in functions
-
 use regex::Regex;
 use serde_json::Value;
 
@@ -94,9 +93,7 @@ pub fn trim(args: &[Value]) -> Result<Value, String> {
         return Err("Trim requires 1 argument: string".to_string());
     }
 
-    let text = args[0]
-        .as_str()
-        .ok_or("Trim: argument must be a string")?;
+    let text = args[0].as_str().ok_or("Trim: argument must be a string")?;
 
     Ok(Value::String(text.trim().to_string()))
 }

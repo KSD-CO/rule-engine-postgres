@@ -1,5 +1,4 @@
 /// Math built-in functions
-
 use serde_json::Value;
 
 /// Round a number to specified decimal places
@@ -36,9 +35,7 @@ pub fn abs(args: &[Value]) -> Result<Value, String> {
         return Err("Abs requires 1 argument: number".to_string());
     }
 
-    let num = args[0]
-        .as_f64()
-        .ok_or("Abs: argument must be a number")?;
+    let num = args[0].as_f64().ok_or("Abs: argument must be a number")?;
 
     Ok(serde_json::Number::from_f64(num.abs())
         .map(Value::Number)
@@ -54,13 +51,14 @@ pub fn min(args: &[Value]) -> Result<Value, String> {
 
     let numbers: Result<Vec<f64>, String> = args
         .iter()
-        .map(|v| v.as_f64().ok_or_else(|| "Min: all arguments must be numbers".to_string()))
+        .map(|v| {
+            v.as_f64()
+                .ok_or_else(|| "Min: all arguments must be numbers".to_string())
+        })
         .collect();
 
     let numbers = numbers?;
-    let min_val = numbers
-        .into_iter()
-        .fold(f64::INFINITY, |a, b| a.min(b));
+    let min_val = numbers.into_iter().fold(f64::INFINITY, |a, b| a.min(b));
 
     Ok(serde_json::Number::from_f64(min_val)
         .map(Value::Number)
@@ -76,13 +74,14 @@ pub fn max(args: &[Value]) -> Result<Value, String> {
 
     let numbers: Result<Vec<f64>, String> = args
         .iter()
-        .map(|v| v.as_f64().ok_or_else(|| "Max: all arguments must be numbers".to_string()))
+        .map(|v| {
+            v.as_f64()
+                .ok_or_else(|| "Max: all arguments must be numbers".to_string())
+        })
         .collect();
 
     let numbers = numbers?;
-    let max_val = numbers
-        .into_iter()
-        .fold(f64::NEG_INFINITY, |a, b| a.max(b));
+    let max_val = numbers.into_iter().fold(f64::NEG_INFINITY, |a, b| a.max(b));
 
     Ok(serde_json::Number::from_f64(max_val)
         .map(Value::Number)
@@ -96,9 +95,7 @@ pub fn floor(args: &[Value]) -> Result<Value, String> {
         return Err("Floor requires 1 argument: number".to_string());
     }
 
-    let num = args[0]
-        .as_f64()
-        .ok_or("Floor: argument must be a number")?;
+    let num = args[0].as_f64().ok_or("Floor: argument must be a number")?;
 
     Ok(serde_json::Number::from_f64(num.floor())
         .map(Value::Number)
@@ -112,9 +109,7 @@ pub fn ceil(args: &[Value]) -> Result<Value, String> {
         return Err("Ceil requires 1 argument: number".to_string());
     }
 
-    let num = args[0]
-        .as_f64()
-        .ok_or("Ceil: argument must be a number")?;
+    let num = args[0].as_f64().ok_or("Ceil: argument must be a number")?;
 
     Ok(serde_json::Number::from_f64(num.ceil())
         .map(Value::Number)
@@ -128,9 +123,7 @@ pub fn sqrt(args: &[Value]) -> Result<Value, String> {
         return Err("Sqrt requires 1 argument: number".to_string());
     }
 
-    let num = args[0]
-        .as_f64()
-        .ok_or("Sqrt: argument must be a number")?;
+    let num = args[0].as_f64().ok_or("Sqrt: argument must be a number")?;
 
     if num < 0.0 {
         return Err("Sqrt: cannot take square root of negative number".to_string());

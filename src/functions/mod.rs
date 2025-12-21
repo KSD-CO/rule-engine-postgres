@@ -1,6 +1,5 @@
 /// Built-in functions library for GRL
 /// Provides date/time, string, math, and JSON utilities
-
 pub mod datetime;
 pub mod json;
 pub mod math;
@@ -61,18 +60,6 @@ pub fn execute_function(name: &str, args: &[Value]) -> Result<Value, String> {
         .get(name)
         .ok_or_else(|| format!("Unknown function: {}", name))
         .and_then(|f| f(args))
-}
-
-/// Preprocess GRL code to replace function calls with inline values
-/// This is a simple string-based replacement approach
-pub fn preprocess_grl(grl_code: &str, _facts: &Value) -> Result<String, String> {
-    let processed = grl_code.to_string();
-
-    // Pattern: FunctionName(arg1, arg2, ...)
-    // For now, we'll handle simple cases
-    // TODO: Implement full expression parser
-
-    Ok(processed)
 }
 
 #[cfg(test)]

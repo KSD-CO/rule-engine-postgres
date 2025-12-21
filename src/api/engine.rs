@@ -25,7 +25,12 @@ pub fn run_rule_engine(facts_json: &str, rules_grl: &str) -> String {
         &mut facts_value,
     ) {
         Ok(grl) => grl,
-        Err(e) => return create_custom_error(&codes::INVALID_GRL, format!("Function preprocessing error: {}", e)),
+        Err(e) => {
+            return create_custom_error(
+                &codes::INVALID_GRL,
+                format!("Function preprocessing error: {}", e),
+            )
+        }
     };
 
     // Convert enhanced facts to Facts object

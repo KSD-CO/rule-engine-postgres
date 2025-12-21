@@ -1,5 +1,4 @@
 /// Register all built-in functions with rust-rule-engine
-
 use rust_rule_engine::{RuleEngineError, RustRuleEngine, Value};
 use serde_json::Value as JsonValue;
 
@@ -23,40 +22,35 @@ fn register_datetime_functions(engine: &mut RustRuleEngine) {
     // DaysSince
     engine.register_function("DaysSince", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = datetime::days_since(&json_args)
-            .map_err(to_eval_error)?;
+        let result = datetime::days_since(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // AddDays
     engine.register_function("AddDays", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = datetime::add_days(&json_args)
-            .map_err(to_eval_error)?;
+        let result = datetime::add_days(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // FormatDate
     engine.register_function("FormatDate", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = datetime::format_date(&json_args)
-            .map_err(to_eval_error)?;
+        let result = datetime::format_date(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Now
     engine.register_function("Now", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = datetime::now(&json_args)
-            .map_err(to_eval_error)?;
+        let result = datetime::now(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Today
     engine.register_function("Today", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = datetime::today(&json_args)
-            .map_err(to_eval_error)?;
+        let result = datetime::today(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 }
@@ -66,64 +60,56 @@ fn register_string_functions(engine: &mut RustRuleEngine) {
     // IsValidEmail
     engine.register_function("IsValidEmail", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = string::is_valid_email(&json_args)
-            .map_err(to_eval_error)?;
+        let result = string::is_valid_email(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Contains
     engine.register_function("Contains", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = string::contains(&json_args)
-            .map_err(to_eval_error)?;
+        let result = string::contains(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // RegexMatch
     engine.register_function("RegexMatch", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = string::regex_match(&json_args)
-            .map_err(to_eval_error)?;
+        let result = string::regex_match(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // ToUpper
     engine.register_function("ToUpper", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = string::to_upper(&json_args)
-            .map_err(to_eval_error)?;
+        let result = string::to_upper(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // ToLower
     engine.register_function("ToLower", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = string::to_lower(&json_args)
-            .map_err(to_eval_error)?;
+        let result = string::to_lower(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Trim
     engine.register_function("Trim", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = string::trim(&json_args)
-            .map_err(to_eval_error)?;
+        let result = string::trim(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Length
     engine.register_function("Length", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = string::length(&json_args)
-            .map_err(to_eval_error)?;
+        let result = string::length(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Substring
     engine.register_function("Substring", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = string::substring(&json_args)
-            .map_err(to_eval_error)?;
+        let result = string::substring(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 }
@@ -133,56 +119,49 @@ fn register_math_functions(engine: &mut RustRuleEngine) {
     // Round
     engine.register_function("Round", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = math::round(&json_args)
-            .map_err(to_eval_error)?;
+        let result = math::round(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Abs
     engine.register_function("Abs", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = math::abs(&json_args)
-            .map_err(to_eval_error)?;
+        let result = math::abs(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Min
     engine.register_function("Min", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = math::min(&json_args)
-            .map_err(to_eval_error)?;
+        let result = math::min(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Max
     engine.register_function("Max", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = math::max(&json_args)
-            .map_err(to_eval_error)?;
+        let result = math::max(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Floor
     engine.register_function("Floor", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = math::floor(&json_args)
-            .map_err(to_eval_error)?;
+        let result = math::floor(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Ceil
     engine.register_function("Ceil", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = math::ceil(&json_args)
-            .map_err(to_eval_error)?;
+        let result = math::ceil(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // Sqrt
     engine.register_function("Sqrt", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = math::sqrt(&json_args)
-            .map_err(to_eval_error)?;
+        let result = math::sqrt(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 }
@@ -192,32 +171,28 @@ fn register_json_functions(engine: &mut RustRuleEngine) {
     // JsonParse
     engine.register_function("JsonParse", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = json::parse(&json_args)
-            .map_err(to_eval_error)?;
+        let result = json::parse(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // JsonStringify
     engine.register_function("JsonStringify", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = json::stringify(&json_args)
-            .map_err(to_eval_error)?;
+        let result = json::stringify(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // JsonGet
     engine.register_function("JsonGet", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = json::get(&json_args)
-            .map_err(to_eval_error)?;
+        let result = json::get(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 
     // JsonSet
     engine.register_function("JsonSet", |args, _facts| {
         let json_args: Vec<JsonValue> = args.iter().map(value_to_json).collect();
-        let result = json::set(&json_args)
-            .map_err(to_eval_error)?;
+        let result = json::set(&json_args).map_err(to_eval_error)?;
         json_to_value(&result).map_err(to_eval_error)
     });
 }
@@ -235,9 +210,7 @@ fn value_to_json(val: &Value) -> JsonValue {
             }
         }
         Value::Boolean(b) => JsonValue::Bool(*b),
-        Value::Array(arr) => {
-            JsonValue::Array(arr.iter().map(value_to_json).collect())
-        }
+        Value::Array(arr) => JsonValue::Array(arr.iter().map(value_to_json).collect()),
         Value::Object(obj) => {
             let map: serde_json::Map<String, JsonValue> = obj
                 .iter()
@@ -265,8 +238,7 @@ fn json_to_value(val: &JsonValue) -> Result<Value, String> {
         }
         JsonValue::Bool(b) => Ok(Value::Boolean(*b)),
         JsonValue::Array(arr) => {
-            let values: Result<Vec<Value>, String> =
-                arr.iter().map(json_to_value).collect();
+            let values: Result<Vec<Value>, String> = arr.iter().map(json_to_value).collect();
             Ok(Value::Array(values?))
         }
         JsonValue::Object(obj) => {

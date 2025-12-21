@@ -1,5 +1,4 @@
 /// JSON manipulation built-in functions
-
 use serde_json::Value;
 
 /// Parse JSON string to object
@@ -36,9 +35,7 @@ pub fn get(args: &[Value]) -> Result<Value, String> {
     }
 
     let obj = &args[0];
-    let path = args[1]
-        .as_str()
-        .ok_or("JsonGet: path must be a string")?;
+    let path = args[1].as_str().ok_or("JsonGet: path must be a string")?;
 
     // Split path by dots
     let keys: Vec<&str> = path.split('.').collect();
@@ -61,9 +58,7 @@ pub fn set(args: &[Value]) -> Result<Value, String> {
     }
 
     let mut obj = args[0].clone();
-    let path = args[1]
-        .as_str()
-        .ok_or("JsonSet: path must be a string")?;
+    let path = args[1].as_str().ok_or("JsonSet: path must be a string")?;
     let value = &args[2];
 
     // Split path by dots
