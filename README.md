@@ -1,12 +1,12 @@
 # rule-engine-postgres
 
 [![CI](https://github.com/KSD-CO/rule-engine-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/KSD-CO/rule-engine-postgres/actions)
-[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
+[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Performance](https://img.shields.io/badge/Performance-48.5k_TPS-brightgreen.svg)](load-tests/BENCHMARK_RESULTS.md)
 [![Benchmark](https://img.shields.io/badge/Benchmark-0.1ms_latency-success.svg)](load-tests/QUICK_RESULTS.md)
 
-PostgreSQL extension that brings rule engine capabilities with **24 built-in functions** directly into your database. Execute complex business logic using GRL (Grule Rule Language) with forward chaining, backward chaining, and full rule versioning support.
+PostgreSQL extension that brings rule engine capabilities with **24 built-in functions** and **NATS JetStream integration** directly into your database. Execute complex business logic using GRL (Grule Rule Language) with forward chaining, backward chaining, and full rule versioning support.
 
 > **⚡ NEW: Benchmark Results Available!**
 > **48,589 TPS** (0.1ms latency) for simple rules | **1,802 TPS** for complex rules | **12 TPS** for 500-rule batch processing
@@ -122,6 +122,7 @@ SELECT run_rule_engine(
 | **📦 Rule Repository** | Version control, tagging, and activation management |
 | **🔄 Dynamic Logic** | Change business rules without code deployment |
 | **🔒 Transaction Safe** | Rules execute within PostgreSQL transactions |
+| **🚀 NATS Integration** | 100K+ msg/sec throughput with JetStream persistence (NEW in v1.8.0) |
 
 ---
 
@@ -290,6 +291,62 @@ SELECT * FROM webhook_status_summary;
 
 ---
 
+### 🆕 NATS Message Queue Integration (v1.8.0)
+
+**High-performance message streaming** with NATS JetStream for webhook event distribution:
+
+```sql
+-- Configure NATS connection
+SELECT rule_nats_config_create(
+    'production',
+    'nats://nats-cluster:4222',
+    '{"jetstream_enabled": true, "max_connections": 10}'::JSONB,
+    'Production NATS cluster'
+);
+
+-- Initialize NATS publisher
+SELECT rule_nats_init('production');
+
+-- Enable NATS for webhook (hybrid mode)
+SELECT rule_webhook_enable_nats(
+    1,                          -- webhook_id
+    'production',               -- config_name
+    'webhooks.events.orders',   -- subject
+    'both'                      -- publish_mode: queue | nats | both
+);
+
+-- Publish to NATS
+SELECT rule_webhook_publish_nats(
+    1,
+    '{"event": "order.created", "order_id": 12345}'::JSONB
+);
+
+-- Monitor NATS health
+SELECT * FROM nats_monitoring_dashboard;
+```
+
+**Features:**
+- 🚀 **100K+ msg/sec** throughput vs 1K msg/sec with PostgreSQL queue
+- 🔄 **Three publishing modes**: queue-only (legacy), NATS-only (fast), hybrid (both)
+- ⚡ **Connection pooling** with round-robin load balancing (10 connections default)
+- 📦 **JetStream persistence** with message acknowledgments and deduplication
+- 🎯 **Queue groups** for automatic load balancing across workers
+- 📊 **Real-time monitoring** with performance dashboards
+- 🔒 **Enterprise security** with TLS, authentication (Token, NKey, Credentials)
+- 🐳 **Production-ready** with Docker Compose and Kubernetes deployment guides
+
+**Worker Examples:**
+- [Node.js Worker](examples/nats-workers/nodejs/) - Production-ready with auto-reconnect
+- [Go Worker](examples/nats-workers/go/) - High-performance concurrent processing
+- [Integration Examples](examples/nats-integration/) - Fan-out, load balancing, hybrid mode
+
+**📚 Complete NATS Documentation:**
+- **[🚀 NATS Integration Guide](docs/NATS_INTEGRATION.md)** - Complete setup and usage guide
+- **[📦 Migration Guide](docs/MIGRATION_GUIDE.md)** - Migrate from queue to NATS (zero-downtime)
+- **[🐳 Production Deployment](docs/PRODUCTION.md)** - Docker, Kubernetes, HA setup
+
+---
+
 ### External Data Sources (API Integration)
 
 Fetch data from external REST APIs in your rules with automatic encryption:
@@ -348,6 +405,9 @@ SELECT * FROM datasource_cache_stats;
 - **[📘 Usage Guide](docs/USAGE_GUIDE.md)** - Complete feature walkthrough
 - **[🎯 Backward Chaining](docs/guides/backward-chaining.md)** - Goal-driven reasoning
 - **[📡 Webhooks](docs/WEBHOOKS.md)** - HTTP callouts and retry logic
+- **[🚀 NATS Integration Guide](docs/NATS_INTEGRATION.md)** - High-performance message streaming
+- **[📦 NATS Migration Guide](docs/MIGRATION_GUIDE.md)** - Migrate from queue to NATS (zero-downtime)
+- **[🐳 NATS Production Deployment](docs/PRODUCTION.md)** - Docker, Kubernetes, HA setup
 - **[🔌 External Data Sources](docs/EXTERNAL_DATASOURCES.md)** - Fetch data from REST APIs
 - **[🔐 Credential Encryption](docs/CREDENTIAL_ENCRYPTION_GUIDE.md)** - AES-256 encryption guide
 - **[⚡ Data Sources Quick Reference](DATASOURCE_QUICK_REFERENCE.md)** - 5-minute cheat sheet
@@ -448,9 +508,42 @@ rule "VIPDiscount" salience 10 {
 
 ---
 
-## 🚀 What's New in v1.6.0
+## 🚀 What's New
 
-### 🔌 External Data Sources - Fetch Data from REST APIs
+### 🆕 v1.8.0 - NATS Message Queue Integration
+
+**High-performance message streaming** for webhook event distribution with NATS JetStream!
+
+- **🚀 100x Performance Boost**: 100K+ msg/sec vs 1K msg/sec with PostgreSQL queue
+- **🔄 Three Publishing Modes**: queue-only (legacy), NATS-only (fast), hybrid (both)
+- **⚡ Connection Pooling**: Round-robin load balancing across 10 connections (default)
+- **📦 JetStream Persistence**: Message acknowledgments, deduplication, 7-day retention
+- **🎯 Queue Groups**: Automatic load balancing across multiple workers
+- **📊 Real-time Monitoring**: Performance dashboards and health checks
+- **🔒 Enterprise Security**: TLS, authentication (Token, NKey, Credentials)
+- **🐳 Production Ready**: Docker Compose + Kubernetes deployment guides
+
+```sql
+-- Quick start
+SELECT rule_nats_init('production');
+SELECT rule_webhook_enable_nats(1, 'production', 'webhooks.events', 'both');
+SELECT rule_webhook_publish_nats(1, '{"event": "order.created"}'::JSONB);
+```
+
+**📚 Documentation:**
+- [NATS Integration Guide](docs/NATS_INTEGRATION.md) - Complete setup and usage
+- [Migration Guide](docs/MIGRATION_GUIDE.md) - Zero-downtime migration from queue
+- [Production Deployment](docs/PRODUCTION.md) - Docker, Kubernetes, HA setup
+
+**Worker Examples:**
+- [Node.js Worker](examples/nats-workers/nodejs/) - Production-ready with auto-reconnect
+- [Go Worker](examples/nats-workers/go/) - High-performance concurrent processing
+
+---
+
+### v1.6.0 - External Data Sources
+
+**🔌 Fetch Data from REST APIs**
 
 **NEW:** Integrate external APIs directly in your rules with built-in caching and retry logic!
 
@@ -565,6 +658,7 @@ src/
 │   ├── triggers.rs            # Event triggers
 │   ├── rulesets.rs            # Rule sets
 │   ├── datasources.rs         # External data source API
+│   ├── nats.rs                # NATS integration API (v1.8.0)
 │   ├── stats.rs               # Performance statistics
 │   └── health.rs              # Health check endpoints
 ├── repository/                # Rule repository & versioning
@@ -578,6 +672,16 @@ src/
 │   ├── backward.rs            # Backward chaining logic
 │   ├── rules.rs               # GRL parsing & compilation
 │   └── facts.rs               # Fact management
+├── nats/                      # NATS JetStream integration (v1.8.0)
+│   ├── config.rs              # NATS configuration & auth
+│   ├── publisher.rs           # JetStream publisher
+│   ├── pool.rs                # Connection pooling
+│   ├── models.rs              # NATS data models
+│   ├── error.rs               # NATS error types
+│   └── tests/                 # Unit tests
+│       ├── config_tests.rs    # Configuration tests
+│       ├── error_tests.rs     # Error handling tests
+│       └── pool_tests.rs      # Connection pool tests
 ├── datasources/               # External API integration (v1.6.0)
 │   ├── client.rs              # HTTP client & connection pooling
 │   └── models.rs              # Data source models
@@ -590,7 +694,7 @@ src/
 
 ---
 
-**Version**: 1.6.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
+**Version**: 1.8.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
 
 ---
 

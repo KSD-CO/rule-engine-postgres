@@ -4,6 +4,10 @@ mod core;
 mod datasources;
 mod error;
 mod functions;
+
+#[allow(dead_code, unused_imports)]
+mod nats;
+
 mod repository;
 mod validation;
 
