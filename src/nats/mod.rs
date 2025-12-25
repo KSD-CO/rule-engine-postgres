@@ -23,8 +23,8 @@
 ///     .with_jetstream("WEBHOOKS")
 ///     .with_pool_size(10);
 ///
-/// // Create publisher
-/// let publisher = NatsPublisher::new(config).await?;
+/// // Create publisher with explicit type
+/// let publisher: NatsPublisher = NatsPublisher::new(config).await?;
 ///
 /// // Publish message
 /// publisher.publish("webhooks.test", b"Hello NATS!").await?;

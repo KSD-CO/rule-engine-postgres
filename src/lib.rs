@@ -6,7 +6,7 @@ mod error;
 mod functions;
 
 #[allow(dead_code, unused_imports)]
-mod nats;
+pub mod nats;
 
 mod repository;
 mod validation;
