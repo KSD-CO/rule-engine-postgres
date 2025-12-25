@@ -1,0 +1,31 @@
+{
+  "name": "nats-webhook-worker",
+  "version": "1.0.0",
+  "description": "NATS JetStream worker for PostgreSQL rule engine webhooks",
+  "main": "worker.js",
+  "scripts": {
+    "start": "node worker.js",
+    "dev": "nodemon worker.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "nats",
+    "jetstream",
+    "webhook",
+    "worker",
+    "postgresql"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "nats": "^2.28.0",
+    "axios": "^1.6.0",
+    "pg": "^8.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

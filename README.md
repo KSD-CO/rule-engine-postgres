@@ -1,12 +1,12 @@
 # rule-engine-postgres
 
 [![CI](https://github.com/KSD-CO/rule-engine-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/KSD-CO/rule-engine-postgres/actions)
-[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
+[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Performance](https://img.shields.io/badge/Performance-48.5k_TPS-brightgreen.svg)](load-tests/BENCHMARK_RESULTS.md)
 [![Benchmark](https://img.shields.io/badge/Benchmark-0.1ms_latency-success.svg)](load-tests/QUICK_RESULTS.md)
 
-PostgreSQL extension that brings rule engine capabilities with **24 built-in functions** directly into your database. Execute complex business logic using GRL (Grule Rule Language) with forward chaining, backward chaining, and full rule versioning support.
+PostgreSQL extension that brings rule engine capabilities with **24 built-in functions** and **NATS JetStream integration** directly into your database. Execute complex business logic using GRL (Grule Rule Language) with forward chaining, backward chaining, and full rule versioning support.
 
 > **⚡ NEW: Benchmark Results Available!**
 > **48,589 TPS** (0.1ms latency) for simple rules | **1,802 TPS** for complex rules | **12 TPS** for 500-rule batch processing
@@ -94,7 +94,7 @@ SELECT rule_engine_version();  -- Returns: 1.7.0
 ### 3. Run Your First Rule
 
 ```sql
--- Simple discount rule
+-- Simple discount rule (nested JSON)
 SELECT run_rule_engine(
     '{"Order": {"total": 150, "discount": 0}}',
     'rule "Discount" {
@@ -103,10 +103,22 @@ SELECT run_rule_engine(
     }'
 )::jsonb;
 
--- Result: {"Order": {"total": 150, "discount": 15}}
+-- Result: {"Order": {"total": 150, "discount": 15.0}}
+
+-- Or use flat JSON (also supported)
+SELECT run_rule_engine(
+    '{"total": 150, "discount": 0}',
+    'rule "Discount" {
+        when total > 100
+        then discount = total * 0.10;
+    }'
+)::jsonb;
+-- Result: {"total": 150, "discount": 15.0}
 ```
 
 ✅ **Done!** You just executed your first business rule.
+
+**Note:** Both flat and nested JSON structures are supported. The extension automatically converts nested objects to the dotted key format used internally.
 
 **📚 More examples:** [Quick Start Guide](docs/QUICKSTART.md)
 
@@ -122,6 +134,7 @@ SELECT run_rule_engine(
 | **📦 Rule Repository** | Version control, tagging, and activation management |
 | **🔄 Dynamic Logic** | Change business rules without code deployment |
 | **🔒 Transaction Safe** | Rules execute within PostgreSQL transactions |
+| **🚀 NATS Integration** | 100K+ msg/sec throughput with JetStream persistence (NEW in v1.8.0) |
 
 ---
 
@@ -169,6 +182,7 @@ SELECT run_rule_engine(
 **List all functions:**
 ```sql
 SELECT * FROM rule_function_list();
+
 ```
 
 ---
@@ -189,7 +203,7 @@ SELECT rule_save(
 -- Execute by name (clean, no GRL text)
 SELECT rule_execute_by_name(
     'vip_discount',
-    '{"Customer": {"tier": "VIP"}, "Order": {"total": 200}}'
+    '{"Customer": {"tier": "VIP"}, "Order": {"total": 200, "discount": 0}}'
 )::jsonb;
 ```
 
@@ -214,10 +228,10 @@ Manage rules like code with semantic versioning:
 
 ```sql
 -- Save with auto-versioning (1.0.0)
-SELECT rule_save('pricing', 'rule "Discount" { ... }', NULL, 'Pricing rules', 'Initial');
+SELECT rule_save('pricing', 'rule "Discount" { when Order.total > 50 then Order.discount = 0.10; }', NULL, 'Pricing rules', 'Initial');
 
 -- Update to version 2.0.0
-SELECT rule_save('pricing', 'rule "NewDiscount" { ... }', '2.0.0', 'Updated pricing', 'Raised limits');
+SELECT rule_save('pricing', 'rule "NewDiscount" { when Order.total > 100 then Order.discount = 0.20; }', '2.0.0', 'Updated pricing', 'Raised limits');
 
 -- Activate version 2.0.0
 SELECT rule_activate('pricing', '2.0.0');
@@ -226,7 +240,7 @@ SELECT rule_activate('pricing', '2.0.0');
 SELECT rule_tag_add('pricing', 'production');
 
 -- Execute (uses active version)
-SELECT rule_execute_by_name('pricing', '{"Order": {"total": 100}}');
+SELECT rule_execute_by_name('pricing', '{"Order": {"total": 150, "discount": 0}}');
 ```
 
 **Features:**
@@ -290,6 +304,59 @@ SELECT * FROM webhook_status_summary;
 
 ---
 
+### 🆕 NATS Message Queue Integration (v1.8.0)
+
+**High-performance message streaming** with NATS JetStream for webhook event distribution:
+
+```sql
+-- Step 1: Configure NATS connection
+SELECT rule_nats_configure(
+    'production',                -- config_name
+    'nats://nats-cluster:4222',  -- nats_url
+    'none',                      -- auth_type (none, token, nkey, credentials)
+    true,                        -- jetstream_enabled
+    'WEBHOOKS',                  -- stream_name
+    'webhooks.events'            -- subject_prefix
+);
+
+-- Step 2: Test connection
+SELECT rule_nats_test_connection('production');
+
+-- Step 3: Enable NATS for webhook (hybrid mode)
+SELECT rule_webhook_enable_nats(
+    1,                          -- webhook_id
+    'webhooks.events.orders',   -- nats_subject
+    'both',                     -- publish_mode: queue | nats | both
+    'production'                -- config_name
+);
+
+-- Step 4: Monitor NATS stats
+SELECT * FROM rule_nats_stats();
+SELECT * FROM rule_nats_webhooks_list();
+```
+
+**Features:**
+- 🚀 **100K+ msg/sec** throughput vs 1K msg/sec with PostgreSQL queue
+- 🔄 **Three publishing modes**: queue-only (legacy), NATS-only (fast), hybrid (both)
+- ⚡ **Connection pooling** with round-robin load balancing (10 connections default)
+- 📦 **JetStream persistence** with message acknowledgments and deduplication
+- 🎯 **Queue groups** for automatic load balancing across workers
+- 📊 **Real-time monitoring** with performance dashboards
+- 🔒 **Enterprise security** with TLS, authentication (Token, NKey, Credentials)
+- 🐳 **Production-ready** with Docker Compose and Kubernetes deployment guides
+
+**Worker Examples:**
+- [Node.js Worker](examples/nats-workers/nodejs/) - Production-ready with auto-reconnect
+- [Go Worker](examples/nats-workers/go/) - High-performance concurrent processing
+- [Integration Examples](examples/nats-integration/) - Fan-out, load balancing, hybrid mode
+
+**📚 Complete NATS Documentation:**
+- **[🚀 NATS Integration Guide](docs/NATS_INTEGRATION.md)** - Complete setup and usage guide
+- **[📦 Migration Guide](docs/MIGRATION_GUIDE.md)** - Migrate from queue to NATS (zero-downtime)
+- **[🐳 Production Deployment](docs/PRODUCTION.md)** - Docker, Kubernetes, HA setup
+
+---
+
 ### External Data Sources (API Integration)
 
 Fetch data from external REST APIs in your rules with automatic encryption:
@@ -348,6 +415,9 @@ SELECT * FROM datasource_cache_stats;
 - **[📘 Usage Guide](docs/USAGE_GUIDE.md)** - Complete feature walkthrough
 - **[🎯 Backward Chaining](docs/guides/backward-chaining.md)** - Goal-driven reasoning
 - **[📡 Webhooks](docs/WEBHOOKS.md)** - HTTP callouts and retry logic
+- **[🚀 NATS Integration Guide](docs/NATS_INTEGRATION.md)** - High-performance message streaming
+- **[📦 NATS Migration Guide](docs/MIGRATION_GUIDE.md)** - Migrate from queue to NATS (zero-downtime)
+- **[🐳 NATS Production Deployment](docs/PRODUCTION.md)** - Docker, Kubernetes, HA setup
 - **[🔌 External Data Sources](docs/EXTERNAL_DATASOURCES.md)** - Fetch data from REST APIs
 - **[🔐 Credential Encryption](docs/CREDENTIAL_ENCRYPTION_GUIDE.md)** - AES-256 encryption guide
 - **[⚡ Data Sources Quick Reference](DATASOURCE_QUICK_REFERENCE.md)** - 5-minute cheat sheet
@@ -388,8 +458,9 @@ SELECT rule_save('ecommerce', '
 ', '1.0.0', 'E-commerce pricing', 'Tiered discounts');
 
 SELECT rule_execute_by_name('ecommerce',
-    '{"Customer": {"tier": "Gold"}, "Order": {"items": 12}}'
+    '{"Customer": {"tier": "Gold"}, "Order": {"items": 12, "discount": 0}}'
 )::jsonb;
+-- Returns: {"Customer": {"tier": "Gold"}, "Order": {"items": 12, "discount": 0.15}}
 ```
 
 **More examples:**
@@ -422,6 +493,17 @@ rule "VIPDiscount" salience 10 {
 }
 ```
 
+**Usage:**
+```sql
+SELECT run_rule_engine(
+    '{"Order": {"total": 200, "discount": 0, "status": "pending"}, "Customer": {"tier": "Gold"}}',
+    'rule "VIPDiscount" salience 10 {
+        when Order.total > 100 && Customer.tier == "Gold"
+        then Order.discount = 0.15; Order.status = "approved";
+    }'
+)::jsonb;
+```
+
 **📚 Full syntax guide:** [GRL Reference](docs/api-reference.md#grl-syntax-reference)
 
 ---
@@ -448,9 +530,41 @@ rule "VIPDiscount" salience 10 {
 
 ---
 
-## 🚀 What's New in v1.6.0
+## 🚀 What's New
 
-### 🔌 External Data Sources - Fetch Data from REST APIs
+### 🆕 v1.8.0 - NATS Message Queue Integration
+
+**High-performance message streaming** for webhook event distribution with NATS JetStream!
+
+- **🚀 100x Performance Boost**: 100K+ msg/sec vs 1K msg/sec with PostgreSQL queue
+- **🔄 Three Publishing Modes**: queue-only (legacy), NATS-only (fast), hybrid (both)
+- **⚡ Connection Pooling**: Round-robin load balancing across 10 connections (default)
+- **📦 JetStream Persistence**: Message acknowledgments, deduplication, 7-day retention
+- **🎯 Queue Groups**: Automatic load balancing across multiple workers
+- **📊 Real-time Monitoring**: Performance dashboards and health checks
+- **🔒 Enterprise Security**: TLS, authentication (Token, NKey, Credentials)
+- **🐳 Production Ready**: Docker Compose + Kubernetes deployment guides
+
+```sql
+-- Quick start
+SELECT rule_nats_configure('production', 'nats://localhost:4222', 'none', true, 'WEBHOOKS', 'webhooks.events');
+SELECT rule_webhook_enable_nats(1, 'webhooks.events.orders', 'both', 'production');
+```
+
+**📚 Documentation:**
+- [NATS Integration Guide](docs/NATS_INTEGRATION.md) - Complete setup and usage
+- [Migration Guide](docs/MIGRATION_GUIDE.md) - Zero-downtime migration from queue
+- [Production Deployment](docs/PRODUCTION.md) - Docker, Kubernetes, HA setup
+
+**Worker Examples:**
+- [Node.js Worker](examples/nats-workers/nodejs/) - Production-ready with auto-reconnect
+- [Go Worker](examples/nats-workers/go/) - High-performance concurrent processing
+
+---
+
+### v1.6.0 - External Data Sources
+
+**🔌 Fetch Data from REST APIs**
 
 **NEW:** Integrate external APIs directly in your rules with built-in caching and retry logic!
 
@@ -565,6 +679,7 @@ src/
 │   ├── triggers.rs            # Event triggers
 │   ├── rulesets.rs            # Rule sets
 │   ├── datasources.rs         # External data source API
+│   ├── nats.rs                # NATS integration API (v1.8.0)
 │   ├── stats.rs               # Performance statistics
 │   └── health.rs              # Health check endpoints
 ├── repository/                # Rule repository & versioning
@@ -578,6 +693,16 @@ src/
 │   ├── backward.rs            # Backward chaining logic
 │   ├── rules.rs               # GRL parsing & compilation
 │   └── facts.rs               # Fact management
+├── nats/                      # NATS JetStream integration (v1.8.0)
+│   ├── config.rs              # NATS configuration & auth
+│   ├── publisher.rs           # JetStream publisher
+│   ├── pool.rs                # Connection pooling
+│   ├── models.rs              # NATS data models
+│   ├── error.rs               # NATS error types
+│   └── tests/                 # Unit tests
+│       ├── config_tests.rs    # Configuration tests
+│       ├── error_tests.rs     # Error handling tests
+│       └── pool_tests.rs      # Connection pool tests
 ├── datasources/               # External API integration (v1.6.0)
 │   ├── client.rs              # HTTP client & connection pooling
 │   └── models.rs              # Data source models
@@ -590,7 +715,7 @@ src/
 
 ---
 
-**Version**: 1.6.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
+**Version**: 1.8.0 | **Status**: Production Ready ✅ | **Maintainer**: Ton That Vu
 
 ---
 

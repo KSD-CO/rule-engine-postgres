@@ -1,8 +1,8 @@
 [package]
 name = "rule-engine-postgres"
-version = "1.7.0"
+version = "1.8.0"
 edition = "2021"
-description = "Production-ready PostgreSQL extension for rule engine with 24 built-in functions, testing, validation, debugging, templates, webhook support, and external data sources."
+description = "Production-ready PostgreSQL extension for rule engine with 24 built-in functions, NATS JetStream integration, testing, validation, debugging, templates, webhook support, and external data sources."
 license = "MIT"
 repository = "https://github.com/KSD-CO/rule-engine-postgres"
 keywords = ["postgresql", "postgres", "extension", "rule-engine", "business-rules"]
@@ -18,6 +18,11 @@ regex = "1.12"
 reqwest = { version = "0.11", features = ["json", "blocking"] }
 lru = "0.12"
 lazy_static = "1.4"
+
+# NATS Integration (RFC-0007)
+async-nats = "0.33"
+tokio = { version = "1.35", features = ["rt-multi-thread", "macros"] }
+thiserror = "1.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

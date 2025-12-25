@@ -1,8 +1,8 @@
 /// GRL Preprocessing for Built-in Functions
 /// Transforms GRL code with function calls into standard GRL by:
 /// 1. Parsing function calls from GRL
-/// 2. Evaluating functions and injecting results into facts
-/// 3. Replacing function calls with computed field references
+/// 2. Evaluating functions and getting results
+/// 3. Replacing function calls with literal values directly
 use regex::Regex;
 use serde_json::Value;
 
@@ -15,38 +15,59 @@ pub struct FunctionCall {
     pub name: String,
     /// Raw arguments: "Customer.email"
     pub raw_args: String,
-    /// Context object where to inject computed value: "Customer"
-    pub context_object: String,
-    /// Unique field name for computed value: "__func_0_isvalidemail"
-    pub computed_field: String,
+    /// Evaluated result value (computed during preprocessing)
+    pub result_value: Option<Value>,
+    /// Whether this function is in a 'when' clause (true) or 'then' clause (false)
+    pub in_when_clause: bool,
+    /// Computed field name for when clause functions (e.g., "__func_0_isvalidemail")
+    pub computed_field: Option<String>,
 }
 
-/// Parse function calls from GRL code
+/// Parse function calls from GRL code and detect their context (when vs then)
 pub fn parse_function_calls(grl_code: &str) -> Result<Vec<FunctionCall>, String> {
     let mut calls = Vec::new();
+    let mut func_counter = 0;
 
     // Regex to match function calls: FunctionName(args)
     // Matches: IsValidEmail(Customer.email), Round(Price * 1.08, 2), etc.
     let func_regex = Regex::new(r"([A-Z][a-zA-Z0-9_]*)\(([^)]+)\)")
         .map_err(|e| format!("Regex error: {}", e))?;
 
-    for (index, cap) in func_regex.captures_iter(grl_code).enumerate() {
+    for cap in func_regex.captures_iter(grl_code) {
         let original_text = cap[0].to_string();
         let name = cap[1].to_string();
         let raw_args = cap[2].to_string();
 
-        // Extract context object from first argument
-        // e.g., "Customer.email" → "Customer"
-        let context_object = extract_context_object(&raw_args)?;
+        // Detect if function is in 'when' or 'then' clause
+        let in_when_clause = is_in_when_clause(grl_code, &original_text);
 
-        // Generate unique computed field name
-        let computed_field = format!("__func_{}_{}", index, name.to_lowercase());
+        // Generate computed field name for when clause functions
+        let computed_field = if in_when_clause {
+            // Extract context from first argument (e.g., "Order.createdAt" → "Order")
+            let context = extract_context_from_args(&raw_args);
+            let field_name = if let Some(ctx) = context {
+                format!(
+                    "{}.{}_{}_{}",
+                    ctx,
+                    "__func",
+                    func_counter,
+                    name.to_lowercase()
+                )
+            } else {
+                format!("__func_{}_{}", func_counter, name.to_lowercase())
+            };
+            func_counter += 1;
+            Some(field_name)
+        } else {
+            None
+        };
 
         calls.push(FunctionCall {
             original_text,
             name,
             raw_args,
-            context_object,
+            result_value: None, // Will be filled during evaluation
+            in_when_clause,
             computed_field,
         });
     }
@@ -55,29 +76,86 @@ pub fn parse_function_calls(grl_code: &str) -> Result<Vec<FunctionCall>, String>
 }
 
 /// Extract context object from function arguments
-/// "Customer.email" → "Customer"
-/// "Order.subtotal * 1.08, 2" → "Order"
-fn extract_context_object(args: &str) -> Result<String, String> {
-    // Find first field access pattern (Object.field)
-    let field_regex = Regex::new(r"([A-Z][a-zA-Z0-9_]*)\.").unwrap();
+/// Examples:
+///   "Order.createdAt" → Some("Order")
+///   "Customer.email, Customer.name" → Some("Customer")
+///   "42, 100" → None
+fn extract_context_from_args(raw_args: &str) -> Option<String> {
+    // Get first argument
+    let first_arg = raw_args.split(',').next()?.trim();
 
-    if let Some(cap) = field_regex.captures(args) {
-        Ok(cap[1].to_string())
+    // Check if it's a dotted field reference (e.g., "Order.createdAt")
+    if first_arg.contains('.') && !first_arg.starts_with('"') {
+        // Extract the first part before the dot
+        let parts: Vec<&str> = first_arg.split('.').collect();
+        if parts.len() >= 2 {
+            return Some(parts[0].to_string());
+        }
+    }
+
+    None
+}
+
+/// Detect if a function call is in a 'when' clause vs 'then' clause
+fn is_in_when_clause(grl_code: &str, function_text: &str) -> bool {
+    // Find the position of the function call
+    if let Some(func_pos) = grl_code.find(function_text) {
+        // Look backwards from function position to find the nearest 'when' or 'then'
+        let before_func = &grl_code[..func_pos];
+
+        // Find last occurrence of 'when' and 'then' before this function
+        let last_when = before_func.rfind("when ");
+        let last_then = before_func.rfind("then ");
+
+        match (last_when, last_then) {
+            (Some(when_pos), Some(then_pos)) => when_pos > then_pos,
+            (Some(_), None) => true,  // Only found 'when'
+            (None, Some(_)) => false, // Only found 'then'
+            (None, None) => false,    // Default to 'then' context
+        }
     } else {
-        // If no context found, default to "Result"
-        Ok("Result".to_string())
+        false
     }
 }
 
-/// Transform GRL code by replacing function calls with computed field references
+/// Convert serde_json::Value to GRL literal string
+/// Examples:
+///   true → "true"
+///   false → "false"
+///   123 → "123"
+///   45.67 → "45.67"
+///   "hello" → "\"hello\""
+///   null → "nil"
+fn value_to_grl_literal(value: &Value) -> String {
+    match value {
+        Value::Null => "nil".to_string(),
+        Value::Bool(b) => b.to_string(),
+        Value::Number(n) => n.to_string(),
+        Value::String(s) => format!("\"{}\"", s.replace('"', "\\\"")),
+        Value::Array(_) => "nil".to_string(), // Arrays not supported in GRL literals
+        Value::Object(_) => "nil".to_string(), // Objects not supported in GRL literals
+    }
+}
+
+/// Transform GRL code by replacing function calls
+/// - Functions in 'then' clauses → replaced with literal values
+/// - Functions in 'when' clauses → replaced with field references
 pub fn transform_grl(grl_code: &str, function_calls: &[FunctionCall]) -> String {
     let mut transformed = grl_code.to_string();
 
     for call in function_calls {
-        // Replace function call with computed field reference
-        // IsValidEmail(Customer.email) → Customer.__func_0_isvalidemail
-        let replacement = format!("{}.{}", call.context_object, call.computed_field);
-        transformed = transformed.replace(&call.original_text, &replacement);
+        if call.in_when_clause {
+            // For 'when' clauses: replace with field reference
+            if let Some(ref field) = call.computed_field {
+                transformed = transformed.replace(&call.original_text, field);
+            }
+        } else {
+            // For 'then' clauses: replace with literal value
+            if let Some(ref value) = call.result_value {
+                let literal = value_to_grl_literal(value);
+                transformed = transformed.replace(&call.original_text, &literal);
+            }
+        }
     }
 
     transformed
@@ -133,13 +211,20 @@ fn parse_and_resolve_args(raw_args: &str, facts: &Value) -> Result<Vec<Value>, S
     Ok(args)
 }
 
-/// Resolve field reference from facts
-/// "Customer.email" → Value from facts["Customer"]["email"]
+/// Resolve field reference from facts (supports both nested and flat formats)
+/// Nested: facts["Customer"]["email"]
+/// Flat: facts["Customer.email"]
 fn resolve_field_reference(field_ref: &str, facts: &Value) -> Option<Value> {
-    let parts: Vec<&str> = field_ref.split('.').collect();
+    // Try flattened dotted key first (e.g., "Customer.email")
+    if let Some(value) = facts.get(field_ref) {
+        return Some(value.clone());
+    }
 
+    // Try nested access as fallback
+    let parts: Vec<&str> = field_ref.split('.').collect();
     if parts.len() < 2 {
-        return None;
+        // Single part - try direct access
+        return facts.get(field_ref).cloned();
     }
 
     let mut current = facts;
@@ -150,50 +235,38 @@ fn resolve_field_reference(field_ref: &str, facts: &Value) -> Option<Value> {
     Some(current.clone())
 }
 
-/// Inject computed field into facts
-pub fn inject_computed_field(
-    facts: &mut Value,
-    context_object: &str,
-    field_name: &str,
-    value: Value,
-) -> Result<(), String> {
-    // Get or create context object
-    if !facts.is_object() {
-        return Err("Facts must be a JSON object".to_string());
-    }
-
-    let facts_obj = facts.as_object_mut().ok_or("Facts must be a JSON object")?;
-
-    // Get or create context object
-    let context = facts_obj
-        .entry(context_object)
-        .or_insert_with(|| Value::Object(serde_json::Map::new()))
-        .as_object_mut()
-        .ok_or_else(|| format!("Context {} must be an object", context_object))?;
-
-    // Inject computed field
-    context.insert(field_name.to_string(), value);
-
-    Ok(())
-}
-
-/// Main preprocessing function - transform GRL and enhance facts
+/// Main preprocessing function - transform GRL by evaluating functions
+/// - Functions in 'when' clauses: inject into facts as fields
+/// - Functions in 'then' clauses: replace with literal values
 pub fn preprocess_grl_with_functions(grl_code: &str, facts: &mut Value) -> Result<String, String> {
-    // Step 1: Parse function calls
-    let function_calls = parse_function_calls(grl_code)?;
+    // Step 1: Parse function calls and detect context (when vs then)
+    let mut function_calls = parse_function_calls(grl_code)?;
 
     if function_calls.is_empty() {
         // No functions to process
         return Ok(grl_code.to_string());
     }
 
-    // Step 2: Evaluate functions and inject into facts
-    for call in &function_calls {
+    // Step 2: Evaluate functions and store results
+    for call in &mut function_calls {
         let result = evaluate_function_call(call, facts)?;
-        inject_computed_field(facts, &call.context_object, &call.computed_field, result)?;
+        call.result_value = Some(result.clone());
+
+        // Step 3: For 'when' clause functions, inject result into facts
+        if call.in_when_clause {
+            if let Some(ref field_name) = call.computed_field {
+                // Inject using the dotted key format (e.g., "Order.__func_0_dayssince")
+                // This matches the flattened facts format
+                if let Some(obj) = facts.as_object_mut() {
+                    obj.insert(field_name.clone(), result);
+                }
+            }
+        }
     }
 
-    // Step 3: Transform GRL code
+    // Step 4: Transform GRL code
+    // - 'when' clauses: replace with field references
+    // - 'then' clauses: replace with literal values
     let transformed_grl = transform_grl(grl_code, &function_calls);
 
     Ok(transformed_grl)
@@ -216,38 +289,77 @@ mod tests {
         let calls = parse_function_calls(grl).unwrap();
         assert_eq!(calls.len(), 1);
         assert_eq!(calls[0].name, "IsValidEmail");
-        assert_eq!(calls[0].context_object, "Customer");
+        assert_eq!(calls[0].raw_args, "Customer.email");
+        assert!(!calls[0].in_when_clause); // Function is in 'then' clause
+        assert!(calls[0].computed_field.is_none()); // No computed field for 'then' functions
     }
 
     #[test]
-    fn test_extract_context_object() {
-        assert_eq!(
-            extract_context_object("Customer.email").unwrap(),
-            "Customer"
-        );
-        assert_eq!(
-            extract_context_object("Order.total * 1.08, 2").unwrap(),
-            "Order"
-        );
+    fn test_parse_function_calls_in_when_clause() {
+        let grl = r#"
+            rule "Test" {
+                when DaysSince(Order.createdAt) > 90
+                then Order.isExpired = true;
+            }
+        "#;
+
+        let calls = parse_function_calls(grl).unwrap();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].name, "DaysSince");
+        assert!(calls[0].in_when_clause); // Function is in 'when' clause
+        assert!(calls[0].computed_field.is_some()); // Has computed field for 'when' functions
+
+        // Check that computed field includes context (Order.__func_0_dayssince)
+        let computed_field = calls[0].computed_field.as_ref().unwrap();
+        assert!(computed_field.starts_with("Order."));
     }
 
     #[test]
-    fn test_transform_grl() {
+    fn test_value_to_grl_literal() {
+        assert_eq!(value_to_grl_literal(&json!(true)), "true");
+        assert_eq!(value_to_grl_literal(&json!(false)), "false");
+        assert_eq!(value_to_grl_literal(&json!(123)), "123");
+        assert_eq!(value_to_grl_literal(&json!(45.67)), "45.67");
+        assert_eq!(value_to_grl_literal(&json!("hello")), "\"hello\"");
+        assert_eq!(value_to_grl_literal(&json!(null)), "nil");
+    }
+
+    #[test]
+    fn test_transform_grl_then_clause() {
         let grl = "Customer.valid = IsValidEmail(Customer.email);";
         let calls = vec![FunctionCall {
             original_text: "IsValidEmail(Customer.email)".to_string(),
             name: "IsValidEmail".to_string(),
             raw_args: "Customer.email".to_string(),
-            context_object: "Customer".to_string(),
-            computed_field: "__func_0_isvalidemail".to_string(),
+            result_value: Some(json!(true)),
+            in_when_clause: false,
+            computed_field: None,
         }];
 
         let transformed = transform_grl(grl, &calls);
-        assert!(transformed.contains("Customer.__func_0_isvalidemail"));
+        assert!(transformed.contains("Customer.valid = true"));
+        assert!(!transformed.contains("IsValidEmail"));
     }
 
     #[test]
-    fn test_resolve_field_reference() {
+    fn test_transform_grl_when_clause() {
+        let grl = "when DaysSince(Order.createdAt) > 90";
+        let calls = vec![FunctionCall {
+            original_text: "DaysSince(Order.createdAt)".to_string(),
+            name: "DaysSince".to_string(),
+            raw_args: "Order.createdAt".to_string(),
+            result_value: Some(json!(724)),
+            in_when_clause: true,
+            computed_field: Some("Order.__func_0_dayssince".to_string()),
+        }];
+
+        let transformed = transform_grl(grl, &calls);
+        assert!(transformed.contains("when Order.__func_0_dayssince > 90"));
+        assert!(!transformed.contains("DaysSince"));
+    }
+
+    #[test]
+    fn test_resolve_field_reference_nested() {
         let facts = json!({
             "Customer": {
                 "email": "test@example.com"
@@ -259,20 +371,17 @@ mod tests {
     }
 
     #[test]
-    fn test_inject_computed_field() {
-        let mut facts = json!({
-            "Customer": {
-                "email": "test@example.com"
-            }
+    fn test_resolve_field_reference_flat() {
+        let facts = json!({
+            "Customer.email": "test@example.com"
         });
 
-        inject_computed_field(&mut facts, "Customer", "__func_0_test", json!(true)).unwrap();
-
-        assert_eq!(facts["Customer"]["__func_0_test"], json!(true));
+        let value = resolve_field_reference("Customer.email", &facts);
+        assert_eq!(value, Some(Value::String("test@example.com".to_string())));
     }
 
     #[test]
-    fn test_preprocess_grl_with_functions() {
+    fn test_preprocess_grl_with_functions_then_clause() {
         let grl = r#"
             rule "EmailCheck" {
                 when Customer.email != nil
@@ -281,18 +390,42 @@ mod tests {
         "#;
 
         let mut facts = json!({
-            "Customer": {
-                "email": "test@example.com"
-            }
+            "Customer.email": "test@example.com"
         });
 
         let transformed = preprocess_grl_with_functions(grl, &mut facts).unwrap();
 
-        // Check that function call was replaced
-        assert!(transformed.contains("Customer.__func_0_isvalidemail"));
+        // Check that function call was replaced with literal value (true)
+        assert!(transformed.contains("Customer.valid = true"));
+        assert!(!transformed.contains("IsValidEmail"));
 
-        // Check that computed field was injected
-        assert!(facts["Customer"]["__func_0_isvalidemail"].is_boolean());
-        assert_eq!(facts["Customer"]["__func_0_isvalidemail"], json!(true));
+        // Check that facts were NOT modified (no injection for 'then' functions)
+        assert!(facts.get("__func_0_isvalidemail").is_none());
+    }
+
+    #[test]
+    fn test_preprocess_grl_with_functions_when_clause() {
+        let grl = r#"
+            rule "CheckAge" {
+                when DaysSince(Order.createdAt) > 90
+                then Order.isExpired = true;
+            }
+        "#;
+
+        let mut facts = json!({
+            "Order.createdAt": "2024-01-01"
+        });
+
+        let transformed = preprocess_grl_with_functions(grl, &mut facts).unwrap();
+
+        // Check that function call was replaced with field reference (includes context)
+        assert!(transformed.contains("when Order.__func_0_dayssince > 90"));
+        assert!(!transformed.contains("DaysSince"));
+
+        // Check that facts were modified (injection for 'when' functions)
+        // Should be injected as dotted key "Order.__func_0_dayssince"
+        assert!(facts.get("Order.__func_0_dayssince").is_some());
+        // The value should be the number of days
+        assert!(facts["Order.__func_0_dayssince"].is_number());
     }
 }
