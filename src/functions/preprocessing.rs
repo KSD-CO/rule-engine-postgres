@@ -46,7 +46,13 @@ pub fn parse_function_calls(grl_code: &str) -> Result<Vec<FunctionCall>, String>
             // Extract context from first argument (e.g., "Order.createdAt" → "Order")
             let context = extract_context_from_args(&raw_args);
             let field_name = if let Some(ctx) = context {
-                format!("{}.{}_{}_{}", ctx, "__func", func_counter, name.to_lowercase())
+                format!(
+                    "{}.{}_{}_{}",
+                    ctx,
+                    "__func",
+                    func_counter,
+                    name.to_lowercase()
+                )
             } else {
                 format!("__func_{}_{}", func_counter, name.to_lowercase())
             };
@@ -229,7 +235,6 @@ fn resolve_field_reference(field_ref: &str, facts: &Value) -> Option<Value> {
     Some(current.clone())
 }
 
-
 /// Main preprocessing function - transform GRL by evaluating functions
 /// - Functions in 'when' clauses: inject into facts as fields
 /// - Functions in 'then' clauses: replace with literal values
@@ -285,7 +290,7 @@ mod tests {
         assert_eq!(calls.len(), 1);
         assert_eq!(calls[0].name, "IsValidEmail");
         assert_eq!(calls[0].raw_args, "Customer.email");
-        assert_eq!(calls[0].in_when_clause, false); // Function is in 'then' clause
+        assert!(!calls[0].in_when_clause); // Function is in 'then' clause
         assert!(calls[0].computed_field.is_none()); // No computed field for 'then' functions
     }
 
@@ -301,7 +306,7 @@ mod tests {
         let calls = parse_function_calls(grl).unwrap();
         assert_eq!(calls.len(), 1);
         assert_eq!(calls[0].name, "DaysSince");
-        assert_eq!(calls[0].in_when_clause, true); // Function is in 'when' clause
+        assert!(calls[0].in_when_clause); // Function is in 'when' clause
         assert!(calls[0].computed_field.is_some()); // Has computed field for 'when' functions
 
         // Check that computed field includes context (Order.__func_0_dayssince)
