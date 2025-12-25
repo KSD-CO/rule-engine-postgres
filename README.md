@@ -94,7 +94,7 @@ SELECT rule_engine_version();  -- Returns: 1.7.0
 ### 3. Run Your First Rule
 
 ```sql
--- Simple discount rule
+-- Simple discount rule (nested JSON)
 SELECT run_rule_engine(
     '{"Order": {"total": 150, "discount": 0}}',
     'rule "Discount" {
@@ -103,10 +103,22 @@ SELECT run_rule_engine(
     }'
 )::jsonb;
 
--- Result: {"Order": {"total": 150, "discount": 15}}
+-- Result: {"Order": {"total": 150, "discount": 15.0}}
+
+-- Or use flat JSON (also supported)
+SELECT run_rule_engine(
+    '{"total": 150, "discount": 0}',
+    'rule "Discount" {
+        when total > 100
+        then discount = total * 0.10;
+    }'
+)::jsonb;
+-- Result: {"total": 150, "discount": 15.0}
 ```
 
 ✅ **Done!** You just executed your first business rule.
+
+**Note:** Both flat and nested JSON structures are supported. The extension automatically converts nested objects to the dotted key format used internally.
 
 **📚 More examples:** [Quick Start Guide](docs/QUICKSTART.md)
 
@@ -170,6 +182,7 @@ SELECT run_rule_engine(
 **List all functions:**
 ```sql
 SELECT * FROM rule_function_list();
+
 ```
 
 ---
@@ -190,7 +203,7 @@ SELECT rule_save(
 -- Execute by name (clean, no GRL text)
 SELECT rule_execute_by_name(
     'vip_discount',
-    '{"Customer": {"tier": "VIP"}, "Order": {"total": 200}}'
+    '{"Customer": {"tier": "VIP"}, "Order": {"total": 200, "discount": 0}}'
 )::jsonb;
 ```
 
@@ -215,10 +228,10 @@ Manage rules like code with semantic versioning:
 
 ```sql
 -- Save with auto-versioning (1.0.0)
-SELECT rule_save('pricing', 'rule "Discount" { ... }', NULL, 'Pricing rules', 'Initial');
+SELECT rule_save('pricing', 'rule "Discount" { when Order.total > 50 then Order.discount = 0.10; }', NULL, 'Pricing rules', 'Initial');
 
 -- Update to version 2.0.0
-SELECT rule_save('pricing', 'rule "NewDiscount" { ... }', '2.0.0', 'Updated pricing', 'Raised limits');
+SELECT rule_save('pricing', 'rule "NewDiscount" { when Order.total > 100 then Order.discount = 0.20; }', '2.0.0', 'Updated pricing', 'Raised limits');
 
 -- Activate version 2.0.0
 SELECT rule_activate('pricing', '2.0.0');
@@ -227,7 +240,7 @@ SELECT rule_activate('pricing', '2.0.0');
 SELECT rule_tag_add('pricing', 'production');
 
 -- Execute (uses active version)
-SELECT rule_execute_by_name('pricing', '{"Order": {"total": 100}}');
+SELECT rule_execute_by_name('pricing', '{"Order": {"total": 150, "discount": 0}}');
 ```
 
 **Features:**
@@ -296,33 +309,30 @@ SELECT * FROM webhook_status_summary;
 **High-performance message streaming** with NATS JetStream for webhook event distribution:
 
 ```sql
--- Configure NATS connection
-SELECT rule_nats_config_create(
-    'production',
-    'nats://nats-cluster:4222',
-    '{"jetstream_enabled": true, "max_connections": 10}'::JSONB,
-    'Production NATS cluster'
+-- Step 1: Configure NATS connection
+SELECT rule_nats_configure(
+    'production',                -- config_name
+    'nats://nats-cluster:4222',  -- nats_url
+    'none',                      -- auth_type (none, token, nkey, credentials)
+    true,                        -- jetstream_enabled
+    'WEBHOOKS',                  -- stream_name
+    'webhooks.events'            -- subject_prefix
 );
 
--- Initialize NATS publisher
-SELECT rule_nats_init('production');
+-- Step 2: Test connection
+SELECT rule_nats_test_connection('production');
 
--- Enable NATS for webhook (hybrid mode)
+-- Step 3: Enable NATS for webhook (hybrid mode)
 SELECT rule_webhook_enable_nats(
     1,                          -- webhook_id
-    'production',               -- config_name
-    'webhooks.events.orders',   -- subject
-    'both'                      -- publish_mode: queue | nats | both
+    'webhooks.events.orders',   -- nats_subject
+    'both',                     -- publish_mode: queue | nats | both
+    'production'                -- config_name
 );
 
--- Publish to NATS
-SELECT rule_webhook_publish_nats(
-    1,
-    '{"event": "order.created", "order_id": 12345}'::JSONB
-);
-
--- Monitor NATS health
-SELECT * FROM nats_monitoring_dashboard;
+-- Step 4: Monitor NATS stats
+SELECT * FROM rule_nats_stats();
+SELECT * FROM rule_nats_webhooks_list();
 ```
 
 **Features:**
@@ -448,8 +458,9 @@ SELECT rule_save('ecommerce', '
 ', '1.0.0', 'E-commerce pricing', 'Tiered discounts');
 
 SELECT rule_execute_by_name('ecommerce',
-    '{"Customer": {"tier": "Gold"}, "Order": {"items": 12}}'
+    '{"Customer": {"tier": "Gold"}, "Order": {"items": 12, "discount": 0}}'
 )::jsonb;
+-- Returns: {"Customer": {"tier": "Gold"}, "Order": {"items": 12, "discount": 0.15}}
 ```
 
 **More examples:**
@@ -480,6 +491,17 @@ rule "VIPDiscount" salience 10 {
         Order.discount = 0.15;
         Order.status = "approved";
 }
+```
+
+**Usage:**
+```sql
+SELECT run_rule_engine(
+    '{"Order": {"total": 200, "discount": 0, "status": "pending"}, "Customer": {"tier": "Gold"}}',
+    'rule "VIPDiscount" salience 10 {
+        when Order.total > 100 && Customer.tier == "Gold"
+        then Order.discount = 0.15; Order.status = "approved";
+    }'
+)::jsonb;
 ```
 
 **📚 Full syntax guide:** [GRL Reference](docs/api-reference.md#grl-syntax-reference)
@@ -525,9 +547,8 @@ rule "VIPDiscount" salience 10 {
 
 ```sql
 -- Quick start
-SELECT rule_nats_init('production');
-SELECT rule_webhook_enable_nats(1, 'production', 'webhooks.events', 'both');
-SELECT rule_webhook_publish_nats(1, '{"event": "order.created"}'::JSONB);
+SELECT rule_nats_configure('production', 'nats://localhost:4222', 'none', true, 'WEBHOOKS', 'webhooks.events');
+SELECT rule_webhook_enable_nats(1, 'webhooks.events.orders', 'both', 'production');
 ```
 
 **📚 Documentation:**

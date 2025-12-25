@@ -1,5 +1,5 @@
 comment = 'Production-ready PostgreSQL extension for rule engine with 24 built-in functions, forward/backward chaining, rule repository, event triggers, rule sets, execution statistics, testing framework, validation, debugging, templates, webhooks, and external data sources'
-default_version = '1.7.0'
+default_version = '1.8.0'
 module_pathname = '$libdir/rule_engine_postgre_extensions'
 relocatable = false
 requires = ''
