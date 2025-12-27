@@ -26,6 +26,62 @@ RETURNS TEXT
 AS 'MODULE_PATHNAME', 'run_rule_engine_fc_wrapper'
 LANGUAGE C STRICT;
 
+-- v2.0.0: Debug functions
+CREATE OR REPLACE FUNCTION run_rule_engine_debug(facts_json TEXT, rules_grl TEXT)
+RETURNS TABLE(session_id TEXT, total_steps BIGINT, total_events BIGINT, result JSONB)
+AS 'MODULE_PATHNAME', 'run_rule_engine_debug_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_get_events(session_id TEXT)
+RETURNS TABLE(step BIGINT, event_type TEXT, description TEXT, event_data JSONB)
+AS 'MODULE_PATHNAME', 'debug_get_events_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_get_session(session_id TEXT)
+RETURNS TABLE(session_id TEXT, started_at BIGINT, completed_at BIGINT, duration_ms BIGINT, status TEXT, total_steps BIGINT, total_events BIGINT, rules_grl TEXT)
+AS 'MODULE_PATHNAME', 'debug_get_session_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_list_sessions()
+RETURNS TABLE(session_id TEXT, started_at BIGINT, duration_ms BIGINT, status TEXT, total_events BIGINT)
+AS 'MODULE_PATHNAME', 'debug_list_sessions_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_delete_session(session_id TEXT)
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_delete_session_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_clear_all_sessions()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_clear_all_sessions_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_enable()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_enable_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_disable()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_disable_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_enable_persistence()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_enable_persistence_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_disable_persistence()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_disable_persistence_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_status()
+RETURNS JSONB
+AS 'MODULE_PATHNAME', 'debug_status_wrapper'
+LANGUAGE C STRICT;
+
 -- Backward chaining API
 CREATE OR REPLACE FUNCTION query_backward_chaining(facts_json TEXT, rules_grl TEXT, goal TEXT)
 RETURNS TEXT

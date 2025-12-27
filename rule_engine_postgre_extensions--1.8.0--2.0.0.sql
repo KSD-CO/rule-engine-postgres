@@ -84,24 +84,64 @@ CREATE INDEX IF NOT EXISTS idx_timelines_parent ON rule_execution_timelines(pare
 -- SQL Functions for Time-Travel Debugging
 -- ============================================================================
 
--- Note: The following debug functions are registered via pgrx:
--- - run_rule_engine_debug(facts_json TEXT, rules_grl TEXT)
---   Returns TABLE(session_id TEXT, total_steps BIGINT, total_events BIGINT, result JSONB)
---
--- - debug_get_events(session_id TEXT)
---   Returns SETOF JSONB - All events for a session
---
--- - debug_get_session(session_id TEXT)
---   Returns JSONB - Session metadata
---
--- - debug_list_sessions()
---   Returns TABLE(...) - All debug sessions
---
--- - debug_delete_session(session_id TEXT)
---   Deletes a session and its events
---
--- - debug_clear_all_sessions()
---   Clears all debug data
+-- Debug execution function
+CREATE OR REPLACE FUNCTION run_rule_engine_debug(facts_json TEXT, rules_grl TEXT)
+RETURNS TABLE(session_id TEXT, total_steps BIGINT, total_events BIGINT, result JSONB)
+AS 'MODULE_PATHNAME', 'run_rule_engine_debug_wrapper'
+LANGUAGE C STRICT;
+
+-- Debug query functions
+CREATE OR REPLACE FUNCTION debug_get_events(session_id TEXT)
+RETURNS TABLE(step BIGINT, event_type TEXT, description TEXT, event_data JSONB)
+AS 'MODULE_PATHNAME', 'debug_get_events_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_get_session(session_id TEXT)
+RETURNS TABLE(session_id TEXT, started_at BIGINT, completed_at BIGINT, duration_ms BIGINT, status TEXT, total_steps BIGINT, total_events BIGINT, rules_grl TEXT)
+AS 'MODULE_PATHNAME', 'debug_get_session_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_list_sessions()
+RETURNS TABLE(session_id TEXT, started_at BIGINT, duration_ms BIGINT, status TEXT, total_events BIGINT)
+AS 'MODULE_PATHNAME', 'debug_list_sessions_wrapper'
+LANGUAGE C STRICT;
+
+-- Debug management functions
+CREATE OR REPLACE FUNCTION debug_delete_session(session_id TEXT)
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_delete_session_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_clear_all_sessions()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_clear_all_sessions_wrapper'
+LANGUAGE C STRICT;
+
+-- Debug configuration functions
+CREATE OR REPLACE FUNCTION debug_enable()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_enable_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_disable()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_disable_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_enable_persistence()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_enable_persistence_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_disable_persistence()
+RETURNS BOOLEAN
+AS 'MODULE_PATHNAME', 'debug_disable_persistence_wrapper'
+LANGUAGE C STRICT;
+
+CREATE OR REPLACE FUNCTION debug_status()
+RETURNS JSONB
+AS 'MODULE_PATHNAME', 'debug_status_wrapper'
+LANGUAGE C STRICT;
 
 COMMENT ON TABLE rule_execution_events IS 'Event sourcing log for time-travel debugging (v2.0.0+)';
 COMMENT ON TABLE rule_execution_sessions IS 'Execution sessions metadata for debugging (v2.0.0+)';
