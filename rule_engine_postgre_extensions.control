@@ -1,5 +1,5 @@
-comment = 'Production-ready PostgreSQL extension for rule engine with 24 built-in functions, forward/backward chaining, rule repository, event triggers, rule sets, execution statistics, testing framework, validation, debugging, templates, webhooks, and external data sources'
-default_version = '1.8.0'
+comment = 'High-performance PostgreSQL rule engine with RETE algorithm (2-24x faster), time-travel debugging, 24 built-in functions, NATS JetStream, webhooks, and flexible execution modes (RETE/Forward Chaining)'
+default_version = '2.0.0'
 module_pathname = '$libdir/rule_engine_postgre_extensions'
 relocatable = false
 requires = ''

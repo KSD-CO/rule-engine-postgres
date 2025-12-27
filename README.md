@@ -1,16 +1,16 @@
 # rule-engine-postgres
 
 [![CI](https://github.com/KSD-CO/rule-engine-postgres/actions/workflows/ci.yml/badge.svg)](https://github.com/KSD-CO/rule-engine-postgres/actions)
-[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/KSD-CO/rule-engine-postgres/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Performance](https://img.shields.io/badge/Performance-48.5k_TPS-brightgreen.svg)](load-tests/BENCHMARK_RESULTS.md)
-[![Benchmark](https://img.shields.io/badge/Benchmark-0.1ms_latency-success.svg)](load-tests/QUICK_RESULTS.md)
+[![Performance](https://img.shields.io/badge/Performance-103k_orders/sec-brightgreen.svg)](tests/PERFORMANCE_RESULTS.md)
+[![RETE](https://img.shields.io/badge/RETE-44k_evals/sec-success.svg)](tests/benchmark_rete.sql)
 
-PostgreSQL extension that brings rule engine capabilities with **24 built-in functions** and **NATS JetStream integration** directly into your database. Execute complex business logic using GRL (Grule Rule Language) with forward chaining, backward chaining, and full rule versioning support.
+High-performance PostgreSQL rule engine with **RETE algorithm** (2-24x faster), **time-travel debugging**, **24 built-in functions**, and **flexible execution modes**. Execute complex business logic using GRL (Grule Rule Language) with incremental evaluation, pattern sharing, and full observability.
 
-> **⚡ NEW: Benchmark Results Available!**
-> **48,589 TPS** (0.1ms latency) for simple rules | **1,802 TPS** for complex rules | **12 TPS** for 500-rule batch processing
-> 📊 [View Full Benchmark Report](load-tests/BENCHMARK_RESULTS.md) | [Quick Results](load-tests/QUICK_RESULTS.md)
+> **🚀 NEW in v2.0.0: RETE Engine + Time-Travel Debugging!**
+> **103,734 orders/sec** (E-commerce) | **44,286 evals/sec** (High-throughput) | **66 orders/sec** (Batch processing)
+> 📊 [Performance Results](tests/PERFORMANCE_RESULTS.md) | [Engine Selection Guide](docs/ENGINE_SELECTION.md) | [Release Summary](docs/V2_RELEASE_SUMMARY.md)
 
 ---
 
@@ -84,17 +84,17 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION rule_engine_postgre_extensions;
 
 -- Verify
-SELECT rule_engine_version();  -- Returns: 1.7.0
+SELECT rule_engine_version();  -- Returns: 2.0.0
 ```
 
 **Note:** The `pgcrypto` extension is required for credential encryption in External Data Sources (v1.6.0+).
 
 ---
 
-### 3. Run Your First Rule
+### 3. Run Your First Rule (RETE Engine - High Performance!)
 
 ```sql
--- Simple discount rule (nested JSON)
+-- Simple discount rule - Uses RETE algorithm by default (2-24x faster!)
 SELECT run_rule_engine(
     '{"Order": {"total": 150, "discount": 0}}',
     'rule "Discount" {
@@ -104,6 +104,19 @@ SELECT run_rule_engine(
 )::jsonb;
 
 -- Result: {"Order": {"total": 150, "discount": 15.0}}
+
+-- Batch processing - RETE really shines here! (66 orders/sec)
+DO $$
+DECLARE i INT;
+BEGIN
+    FOR i IN 1..100 LOOP
+        PERFORM run_rule_engine(
+            format('{"Order": {"id": %s, "total": %s}}', i, 1000 + i*10)::text,
+            'rule "VIP" { when Order.total > 1500 then Order.vip = true; }'
+        );
+    END LOOP;
+END $$;
+-- RETE: ~1.5 seconds | Forward Chaining: ~15 seconds | Speedup: 10x!
 
 -- Or use flat JSON (also supported)
 SELECT run_rule_engine(
@@ -118,6 +131,24 @@ SELECT run_rule_engine(
 
 ✅ **Done!** You just executed your first business rule.
 
+**Engine Selection (v2.0.0):**
+```sql
+-- Default: RETE algorithm (recommended for production)
+SELECT run_rule_engine(facts, rules);           -- 2-24x faster
+
+-- Explicit: RETE for high-performance scenarios
+SELECT run_rule_engine_rete(facts, rules);      -- Same as default
+
+-- Forward Chaining: For simple rules (1-3 rules, single eval)
+SELECT run_rule_engine_fc(facts, rules);        -- Traditional approach
+```
+
+**When to use which:**
+- ✅ **RETE** (`run_rule_engine`): Batch processing, complex rules, production workloads
+- ✅ **Forward Chaining** (`run_rule_engine_fc`): Simple validation, 1-3 rules, debugging
+
+📊 **[Engine Selection Guide](docs/ENGINE_SELECTION.md)** | [Performance Comparison](tests/PERFORMANCE_RESULTS.md)
+
 **Note:** Both flat and nested JSON structures are supported. The extension automatically converts nested objects to the dotted key format used internally.
 
 **📚 More examples:** [Quick Start Guide](docs/QUICKSTART.md)
@@ -128,9 +159,10 @@ SELECT run_rule_engine(
 
 | Feature | Benefit |
 |---------|---------|
-| **🚀 No Microservices** | Business rules run directly in PostgreSQL - no external services |
-| **⚡ High Performance** | Sub-millisecond execution (48,589 TPS for simple rules) |
-| **🎯 Dual Reasoning** | Forward chaining (data-driven) + Backward chaining (goal-driven) |
+| **🚀 RETE Algorithm** | 2-24x faster with incremental evaluation & pattern sharing |
+| **⚡ Extreme Performance** | 103K orders/sec (e-commerce), 44K evals/sec (high-throughput) |
+| **🎯 Flexible Engines** | RETE (fast) + Forward Chaining (predictable) - choose per use case |
+| **🐛 Time-Travel Debug** | Event sourcing for complete execution replay & analysis |
 | **📦 Rule Repository** | Version control, tagging, and activation management |
 | **🔄 Dynamic Logic** | Change business rules without code deployment |
 | **🔒 Transaction Safe** | Rules execute within PostgreSQL transactions |
@@ -139,6 +171,94 @@ SELECT run_rule_engine(
 ---
 
 ## 🎯 Core Features
+
+### 🚀 v2.0.0: RETE Engine + Time-Travel Debugging
+
+#### High-Performance RETE Algorithm
+
+**3 execution modes** for optimal performance:
+
+```sql
+-- 1. Default (RETE) - Recommended for production
+SELECT run_rule_engine(facts, rules);  -- 2-24x faster!
+
+-- 2. Explicit RETE - For batch processing
+SELECT run_rule_engine_rete(facts, rules);  -- 103K orders/sec
+
+-- 3. Forward Chaining - For simple cases
+SELECT run_rule_engine_fc(facts, rules);  -- Predictable order
+```
+
+**Performance comparison** (measured):
+```
+Scenario              | RETE        | Forward Chaining | Speedup
+---------------------|-------------|------------------|--------
+Batch 50 orders      | 755 ms      | ~4000 ms        | 5.3x
+High-throughput 100  | 2.3 ms      | ~8000 ms        | 3478x
+E-commerce (25)      | 0.2 ms      | ~3000 ms        | 15000x
+```
+
+**When to use each:**
+- ✅ **RETE**: Batch processing, complex rules, high-throughput (>50/sec)
+- ✅ **FC**: Simple rules (1-3), single evaluations, debugging
+
+📊 **[Full Performance Results](tests/PERFORMANCE_RESULTS.md)** | **[Engine Selection Guide](docs/ENGINE_SELECTION.md)**
+
+#### Time-Travel Debugging
+
+Complete execution replay with event sourcing:
+
+```sql
+-- Execute with debugging enabled
+SELECT * FROM run_rule_engine_debug(
+    '{"Order": {"total": 1500}}',
+    'rule "Discount" { when Order.total > 1000 then Order.discount = 150; }'
+);
+-- Returns: session_id, total_steps, total_events, result
+
+-- Replay execution step-by-step
+SELECT * FROM debug_get_events('session_<uuid>');
+
+-- List all debug sessions
+SELECT * FROM debug_list_sessions();
+
+-- Analyze why a rule fired/didn't fire
+SELECT event_type, step, event_data
+FROM debug_get_events('session_<uuid>')
+WHERE event_type IN ('RuleFired', 'RuleSkipped');
+```
+
+**Persistence:** Events stored in PostgreSQL for long-term analysis
+- `rule_execution_events` - Immutable event log
+- `rule_execution_sessions` - Session metadata
+
+**Debug Configuration:**
+```sql
+-- Enable/disable debug mode (affects performance overhead)
+SELECT debug_enable();   -- Enable debug (5-15% overhead)
+SELECT debug_disable();  -- Disable debug (0% overhead)
+
+-- Enable/disable PostgreSQL persistence
+SELECT debug_enable_persistence();   -- Store events in database
+SELECT debug_disable_persistence();  -- In-memory only (faster)
+
+-- Check debug status
+SELECT * FROM debug_status();
+-- Returns: {"debug_enabled": true, "persistence_enabled": false}
+
+-- Clean up old debug sessions
+SELECT debug_delete_session('session-id');
+SELECT debug_clear_all_sessions();  -- ⚠️ Deletes all debug data
+```
+
+**Best Practices:**
+- **Production**: Disable debug by default, enable only for troubleshooting
+- **Development**: Enable debug with in-memory persistence (fast)
+- **Audit Trail**: Enable both debug and persistence for compliance
+
+📚 **[Full Debug Guide](https://github.com/KSD-CO/rule-engine-postgres/wiki/Time-Travel-Debugging)**
+
+---
 
 ### 🆕 Built-in Functions Library (v1.7.0)
 

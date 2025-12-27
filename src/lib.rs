@@ -2,6 +2,7 @@
 mod api;
 mod core;
 mod datasources;
+mod debug;
 mod error;
 mod functions;
 

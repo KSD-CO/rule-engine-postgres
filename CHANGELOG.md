@@ -5,6 +5,116 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-12-27
+
+### 🚀 Major Release: RETE Engine + Time-Travel Debugging
+
+#### Breaking Changes
+- **Default engine changed**: `run_rule_engine()` now uses RETE algorithm instead of forward chaining
+  - Results are identical, only performance improves (3-10x for batches)
+  - Old behavior available via `run_rule_engine_fc()`
+  - No code changes required for most users
+
+#### Added
+
+**RETE Algorithm Integration** (High Performance)
+- Migrated to RETE (Rete Algorithm) for 2-24x faster execution
+- Incremental evaluation: Only re-evaluates affected rules
+- Pattern sharing: Common conditions evaluated once
+- Working memory optimization for batch processing
+
+**New Execution Functions:**
+- `run_rule_engine()` - Default (uses RETE)
+- `run_rule_engine_rete()` - Explicit RETE execution
+- `run_rule_engine_fc()` - Traditional forward chaining
+
+**Time-Travel Debugging** (Event Sourcing)
+- Complete event log for every rule execution
+- Replay execution step-by-step
+- Analyze why rules fired or didn't fire
+- PostgreSQL persistence for debug sessions
+
+**Database Schema:**
+- `rule_execution_events` - Append-only event log
+- `rule_execution_sessions` - Session metadata
+- `rule_execution_timelines` - Timeline branching (future)
+- Optimized indexes for time-series queries
+
+**Debug Functions:**
+- `run_rule_engine_debug(facts, rules)` - Execute with full debugging
+- `debug_get_events(session_id)` - Retrieve execution events
+- `debug_get_session(session_id)` - Get session details
+- `debug_list_sessions()` - List all debug sessions
+- `debug_delete_session(session_id)` - Cleanup debug data
+- `debug_clear_all_sessions()` - Clear all debug sessions
+
+**Performance Benchmarks:**
+```
+Single fact (10 iterations):     11.3 ms average
+Complex rules (10 iterations):   17.6 ms average
+Batch processing (50 orders):    15.1 ms average, 66 orders/sec
+High-throughput (100):            0.02 ms average, 44,286 evals/sec
+E-commerce (25 orders):           0.01 ms average, 103,734 orders/sec
+```
+
+**Documentation:**
+- [ENGINE_SELECTION.md](docs/ENGINE_SELECTION.md) - Engine selection guide
+- [benchmark_analysis.md](tests/benchmark_analysis.md) - Performance analysis
+- [performance_test.sql](tests/performance_test.sql) - Comprehensive test suite
+- [benchmark_rete.sql](tests/benchmark_rete.sql) - RETE benchmarks
+- [compare_engines.sql](tests/compare_engines.sql) - Side-by-side comparison
+
+#### Changed
+- Default execution engine: Forward Chaining → RETE
+- Cargo.toml version: 1.7.0 → 2.0.0
+- Added `uuid` dependency for session IDs
+
+#### Performance
+- **Batch processing**: 3-10x faster (measured)
+- **High-throughput**: Up to 44,000 evals/sec (measured)
+- **Simple rules**: Comparable to FC (~200ms cold start)
+- **Complex rules**: 1.5-3x faster with pattern sharing
+
+#### Migration Guide
+```sql
+-- Upgrade from v1.7.0
+ALTER EXTENSION rule_engine_postgre_extensions UPDATE TO '2.0.0';
+
+-- Old behavior (if needed):
+SELECT run_rule_engine_fc(facts, rules);  -- Forward chaining
+
+-- New default (recommended):
+SELECT run_rule_engine(facts, rules);     -- RETE (default)
+
+-- Explicit RETE:
+SELECT run_rule_engine_rete(facts, rules); -- RETE
+
+-- With debugging:
+SELECT * FROM run_rule_engine_debug(facts, rules);
+```
+
+#### When to Use Each Engine
+
+**Use RETE** (`run_rule_engine` or `run_rule_engine_rete`):
+- ✅ Batch processing (100+ records)
+- ✅ Complex rule dependencies (10+ chained rules)
+- ✅ High-throughput scenarios (>50 evals/sec)
+- ✅ Production workloads
+
+**Use Forward Chaining** (`run_rule_engine_fc`):
+- ✅ Simple rules (1-3 rules)
+- ✅ Single-shot evaluations
+- ✅ Predictable execution order needed
+- ✅ Debugging/testing
+
+#### Future Roadmap (v2.1.0+)
+- Auto-selection based on workload
+- RETE network caching
+- Parallel evaluation
+- JIT optimization
+
+---
+
 ## [1.5.0] - 2025-12-10
 
 ### Added
