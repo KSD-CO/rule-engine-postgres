@@ -2,6 +2,7 @@ pub mod backward;
 pub mod builtin_functions;
 pub mod datasources;
 pub mod debug;
+pub mod debug_config;
 pub mod engine;
 pub mod health;
 pub mod nats;

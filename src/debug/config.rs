@@ -4,10 +4,10 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Global debug mode flag
-static DEBUG_ENABLED: AtomicBool = AtomicBool::new(true);
+/// Global debug mode flag (default: disabled in production)
+static DEBUG_ENABLED: AtomicBool = AtomicBool::new(false);
 
-/// Global persistence flag (save to PostgreSQL)
+/// Global persistence flag (save to PostgreSQL, default: disabled)
 static DEBUG_PERSISTENCE: AtomicBool = AtomicBool::new(false);
 
 /// Check if debug mode is enabled

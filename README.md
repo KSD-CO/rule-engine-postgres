@@ -234,27 +234,83 @@ WHERE event_type IN ('RuleFired', 'RuleSkipped');
 
 **Debug Configuration:**
 ```sql
--- Enable/disable debug mode (affects performance overhead)
-SELECT debug_enable();   -- Enable debug (5-15% overhead)
-SELECT debug_disable();  -- Disable debug (0% overhead)
+-- Runtime control (no code changes needed!)
+SELECT debug_enable();   -- Enable debug mode (5-15% overhead)
+SELECT debug_disable();  -- Disable debug mode (0% overhead)
 
--- Enable/disable PostgreSQL persistence
-SELECT debug_enable_persistence();   -- Store events in database
+-- PostgreSQL persistence control
+SELECT debug_enable_persistence();   -- Store events in database tables
 SELECT debug_disable_persistence();  -- In-memory only (faster)
 
--- Check debug status
-SELECT * FROM debug_status();
--- Returns: {"debug_enabled": true, "persistence_enabled": false}
+-- Check current configuration
+SELECT debug_status();
+-- Returns: {"debug_enabled": false, "persistence_enabled": false}
 
--- Clean up old debug sessions
+-- Clean up debug sessions
 SELECT debug_delete_session('session-id');
 SELECT debug_clear_all_sessions();  -- ⚠️ Deletes all debug data
 ```
 
+**Use Cases:**
+
+1. **Production Troubleshooting** (no code deploy needed):
+```sql
+-- Enable debug mode
+SELECT debug_enable();
+
+-- Run SAME function - automatically captures debug events!
+SELECT run_rule_engine(
+    '{"Order": {"total": 500}}',
+    'rule "Discount" { when Order.total > 1000 then Order.discount = 150; }'
+);
+-- Returns: {"Order": {"total": 500}}
+-- NOTICE: Debug session: session_abc123... (use debug_get_events() to view)
+
+-- Check all debug sessions
+SELECT * FROM debug_list_sessions();
+
+-- Analyze what happened
+SELECT * FROM debug_get_events('session_abc123...');
+-- Shows: RuleEvaluated matched=false, reason="Order.total = 500 < 1000"
+
+-- Disable debug when done
+SELECT debug_disable();
+
+-- Same function now runs at full speed (0% overhead)
+SELECT run_rule_engine(...);
+```
+
+2. **Development** - Always-on debug with in-memory storage:
+```sql
+SELECT debug_enable();
+SELECT debug_disable_persistence();  -- Fast in-memory only
+
+-- All run_rule_engine() calls now capture debug events
+SELECT run_rule_engine(...);
+```
+
+3. **Compliance/Audit** - Persistent debug trail:
+```sql
+SELECT debug_enable();
+SELECT debug_enable_persistence();  -- Store to PostgreSQL tables
+
+-- All executions stored in rule_execution_events table
+SELECT run_rule_engine(...);
+```
+
+4. **Explicit Debug** - Use separate function (backwards compatible):
+```sql
+-- Always captures debug, regardless of debug_enable() setting
+SELECT * FROM run_rule_engine_debug(...);
+-- Returns: session_id | total_steps | total_events | result
+```
+
 **Best Practices:**
-- **Production**: Disable debug by default, enable only for troubleshooting
-- **Development**: Enable debug with in-memory persistence (fast)
-- **Audit Trail**: Enable both debug and persistence for compliance
+- **Default**: Debug disabled in production (0% overhead)
+- **Troubleshooting**: `SELECT debug_enable()` → same code captures events
+- **No code changes**: Production code doesn't need modification
+- **Memory**: Use in-memory mode unless audit trail required
+- **Cleanup**: Clear old sessions regularly with `debug_clear_all_sessions()`
 
 📚 **[Full Debug Guide](https://github.com/KSD-CO/rule-engine-postgres/wiki/Time-Travel-Debugging)**
 
