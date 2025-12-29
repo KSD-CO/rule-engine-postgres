@@ -1,0 +1,53 @@
+[package]
+name = "rule-engine-postgres-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+serde_json = "1.0"
+
+# Note: Commented out to avoid pgrx linking issues with fuzzing
+# Fuzzing PostgreSQL extensions requires special PostgreSQL library setup
+# [dependencies.rule-engine-postgres]
+# path = ".."
+
+# Standalone fuzzing targets (no pgrx dependency)
+[[bin]]
+name = "fuzz_json_standalone"
+path = "fuzz_targets/fuzz_json_standalone.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_extreme_values"
+path = "fuzz_targets/fuzz_extreme_values.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_grl_parser"
+path = "fuzz_targets/fuzz_grl_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_rule_execution"
+path = "fuzz_targets/fuzz_rule_execution.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_builtin_functions"
+path = "fuzz_targets/fuzz_builtin_functions.rs"
+test = false
+doc = false
+bench = false

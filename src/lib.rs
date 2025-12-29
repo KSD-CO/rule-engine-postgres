@@ -1,6 +1,6 @@
 // Module declarations
 mod api;
-mod core;
+pub mod core; // Make public for fuzzing
 mod datasources;
 mod debug;
 mod error;
