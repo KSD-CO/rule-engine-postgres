@@ -1,17 +1,17 @@
 # Dockerfile for PostgreSQL with rule-engine-postgre-extensions
-# Supports PostgreSQL 16 and 17 via build arg
-ARG PG_VERSION=17
-FROM postgres:${PG_VERSION}-bookworm
+# Supports PostgreSQL 16, 17, and 18 via build arg
+ARG PG_MAJOR=17
+FROM postgres:${PG_MAJOR}-bookworm
 
 # Install build dependencies
-ARG PG_VERSION=17
+ARG PG_MAJOR=17
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     git \
     pkg-config \
     libssl-dev \
-    postgresql-server-dev-${PG_VERSION} \
+    postgresql-server-dev-${PG_MAJOR} \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Rust
@@ -22,8 +22,8 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo install cargo-pgrx --version 0.16.1 --locked
 
 # Initialize pgrx with correct PostgreSQL version
-ARG PG_VERSION=17
-RUN cargo pgrx init --pg${PG_VERSION} /usr/bin/pg_config
+ARG PG_MAJOR=17
+RUN cargo pgrx init --pg${PG_MAJOR} /usr/bin/pg_config
 
 # Copy extension source code
 WORKDIR /build
@@ -34,8 +34,8 @@ COPY rule_engine_postgre_extensions--*.sql ./
 COPY migrations ./migrations
 
 # Build the extension (don't use cargo pgrx install - pgrx_embed not available)
-ARG PG_VERSION=17
-RUN cargo build --release --no-default-features --features pg${PG_VERSION}
+ARG PG_MAJOR=17
+RUN cargo build --release --no-default-features --features pg${PG_MAJOR}
 
 # Manually install files
 RUN PG_LIB=$(pg_config --pkglibdir) && \

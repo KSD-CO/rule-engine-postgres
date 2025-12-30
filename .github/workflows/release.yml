@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        pg_version: [16, 17]
-    
+        pg_version: [16, 17, 18]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -154,7 +154,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        pg_version: [16, 17]
+        pg_version: [16, 17, 18]
 
     steps:
       - name: Checkout code
@@ -206,7 +206,7 @@ jobs:
           context: .
           push: true
           build-args: |
-            PG_VERSION=${{ matrix.pg_version }}
+            PG_MAJOR=${{ matrix.pg_version }}
           tags: ${{ steps.tags.outputs.tags }}
           labels: |
             org.opencontainers.image.title=Rule Engine PostgreSQL Extension

@@ -32,6 +32,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["pg17"]
 pg16 = ["pgrx/pg16"]
 pg17 = ["pgrx/pg17"]
+pg18 = ["pgrx/pg18"]
 pg_test = []
 
 [dev-dependencies]
