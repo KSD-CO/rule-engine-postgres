@@ -25,8 +25,17 @@ THREADS=${THREADS:-4}         # Number of threads
 DURATION=${DURATION:-60}      # Test duration in seconds
 RATE=${RATE:-0}              # Rate limit (0 = unlimited)
 
-# Output directory
-OUTPUT_DIR="results"
+# Safety guard: avoid spawning too many client*thread workers by accident.
+# If the product CLIENTS*THREADS is large we abort unless FORCE=1 is set.
+PROD=$((CLIENTS * THREADS))
+SAFE_LIMIT=${SAFE_LIMIT:-200}
+if [ "$PROD" -gt "$SAFE_LIMIT" ] && [ "${FORCE:-0}" -ne 1 ]; then
+    echo -e "\n\e[33m⚠️  Safety: CLIENTS=$CLIENTS THREADS=$THREADS → product=$PROD exceeds SAFE_LIMIT=$SAFE_LIMIT.\n    This would spawn many worker threads and can overload your machine / VS Code integrated terminal.\n    To continue anyway set FORCE=1 in the environment (e.g. FORCE=1 ./run_loadtest.sh)\e[0m\n"
+    exit 1
+fi
+
+# Output directory (overridable for AB runs)
+OUTPUT_DIR=${OUTPUT_DIR:-"results"}
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 RESULT_FILE="${OUTPUT_DIR}/loadtest_${TIMESTAMP}.txt"
 
@@ -208,13 +217,18 @@ main() {
         "04_repository_execute.sql" \
         "Execute saved rules by name"
 
-    run_test "05. Webhook Calls" \
-        "05_webhook_call.sql" \
-        "HTTP callouts with queue processing"
+    # Optionally skip external tests (webhooks/datasources) to avoid network noise
+    if [ "${SKIP_EXTERNAL:-0}" -eq 1 ]; then
+        echo -e "${YELLOW}⚠️  SKIP_EXTERNAL=1 set — skipped external tests (05 Webhook Calls, 06 Datasource Fetch)${NC}"
+    else
+        run_test "05. Webhook Calls" \
+            "05_webhook_call.sql" \
+            "HTTP callouts with queue processing"
 
-    run_test "06. Datasource Fetch" \
-        "06_datasource_fetch.sql" \
-        "External API fetching with caching"
+        run_test "06. Datasource Fetch" \
+            "06_datasource_fetch.sql" \
+            "External API fetching with caching"
+    fi
 
     # Cleanup
     cleanup_test_env

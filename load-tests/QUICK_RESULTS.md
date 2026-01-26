@@ -1,23 +1,32 @@
 # Load Test Results - Quick Summary
 
-**Date:** December 18, 2025 | **Version:** 1.6.0 | **Platform:** PostgreSQL 17.7 on Apple Silicon
+**Date:** January 26, 2026 | **Version:** 2.0.0 + rust-rule-engine v1.18.26 | **Platform:** PostgreSQL on Linux
 
 ---
 
-## 🚀 Performance at a Glance
+## 🚀 Performance at a Glance - rust-rule-engine v1.18.26
 
-| Test | Rules | TPS | Latency | vs Target | Grade |
-|------|-------|-----|---------|-----------|-------|
-| **Simple** | 1 | **48,589** | 0.1ms | **+3,744%** | ⭐⭐⭐⭐⭐ |
-| **Complex** | 4 | **1,802** | 5.5ms | **+278%** | ⭐⭐⭐⭐⭐ |
-| **Stress** | 100 | **62** | 162ms | N/A | ⭐⭐⭐⭐ |
-| **Extreme** | **500** | **12** | **420ms** | N/A | ⭐⭐⭐⭐ |
+**Benchmark Configuration:**
+- Duration: 30 seconds per test
+- Clients: 10 concurrent
+- Threads: 4
+- Test focus: Repository execute (saved rules)
+
+| Version | Mean TPS | StdDev | Improvement vs v1.17.0 | Status |
+|---------|----------|--------|------------------------|--------|
+| **v1.18.26** | **13,505** | 3,068 | **+19.5%** | ⭐⭐⭐⭐⭐ Recommended |
+| v1.18.0-alpha | 11,388 | 1,304 | +0.8% | ⚠️ Alpha |
+| v1.17.0 | 11,298 | 1,801 | Baseline | - |
 
 **TPS** = Transactions Per Second
 
+### 🎯 Recommendation
+
+**Use v1.18.26** - Provides the best performance (15.7% faster than v1.18.0-alpha, 19.5% faster than v1.17.0) with stable release quality.
+
 ---
 
-## 📊 Key Metrics
+## 📊 Historical Results (Previous Tests)
 
 ### ⚡ Speed
 - **Fastest:** 0.101ms (simple rule)
